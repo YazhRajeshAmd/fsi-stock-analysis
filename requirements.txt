@@ -1,0 +1,7 @@
+yfinance
+langchain
+langchain-community
+pandas
+matplotlib
+gradio
+requests

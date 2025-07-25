@@ -1,0 +1,331 @@
+import yfinance as yf
+from langchain_community.llms import Ollama
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+import pandas as pd
+import matplotlib.pyplot as plt
+import gradio as gr
+import re
+from datetime import datetime, timedelta
+import time
+import requests
+
+# Initialize Ollama with Llama3.1 - increased temperature for more varied responses
+llm = Ollama(model="llama3.1:70b", temperature=0.3)
+
+# Updated prompt template with momentum and price vs SMA
+stock_analysis_prompt = PromptTemplate(
+    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", "sma", "rsi", "news_headlines", "momentum", "price_vs_sma"],
+    template="""
+You are a financial analyst AI. Analyze the following stock data and provide insights:
+
+Stock Symbol: {stock_symbol}
+Date Range: {start_date} to {end_date}
+Starting Price: ${start_price}
+Ending Price: ${end_price}
+
+Stock Data:
+{stock_data}
+
+Technical Indicators:
+SMA (20): {sma}
+RSI (14): {rsi}
+Price Momentum: {momentum}%
+Price vs SMA: {price_vs_sma}
+
+Recent News Headlines:
+{news_headlines}
+
+Please provide a comprehensive analysis including:
+1. Overall trend of the stock price
+2. Key statistics (average price, highest price, lowest price)
+3. Technical indicator interpretation (SMA, RSI)
+4. Any notable events or patterns observed
+5. Volume analysis and its correlation with price changes
+6. Impact of recent news on the stock
+7. Comparison of the start and end prices
+8. Any potential factors that might have influenced the stock's performance
+9. A brief outlook for the stock based on this historical data
+
+Based on your analysis, provide a clear recommendation: BUY, SELL, or HOLD.
+Use these guidelines:
+- BUY: Strong upward trend (momentum > 5%), price above SMA, RSI < 70, positive sentiment
+- SELL: Strong downward trend (momentum < -5%), price below SMA, RSI > 70, negative sentiment  
+- HOLD: Mixed signals, sideways trend (-5% <= momentum <= 5%), or insufficient data
+
+At the end of your analysis, clearly state: "RECOMMENDATION: [Your recommendation]"
+
+Analysis:
+"""
+)
+
+# Create an LLMChain for stock analysis
+stock_analysis_chain = LLMChain(llm=llm, prompt=stock_analysis_prompt, verbose=True)
+
+def get_stock_data(symbol, start_date, end_date):
+    try:
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_adjusted = end + timedelta(days=1)
+        stock = yf.Ticker(symbol)
+        data = stock.history(start=start, end=end_adjusted)
+        data = data.loc[start_date:end_date]
+        return data
+    except Exception as e:
+        return pd.DataFrame()
+
+def get_technical_indicators(data):
+    indicators = {}
+    
+    # Simple Moving Average (20)
+    indicators['sma'] = data['Close'].rolling(window=20).mean().iloc[-1] if len(data) >= 20 else None
+    
+    # Relative Strength Index (14)
+    delta = data['Close'].diff()
+    up = delta.clip(lower=0)
+    down = -1 * delta.clip(upper=0)
+    roll_up = up.rolling(14).mean()
+    roll_down = down.rolling(14).mean()
+    rs = roll_up / roll_down
+    rsi = 100.0 - (100.0 / (1.0 + rs))
+    indicators['rsi'] = rsi.iloc[-1] if len(rsi) >= 14 else None
+    
+    # Price momentum (% change over period)
+    if len(data) > 1:
+        indicators['momentum'] = ((data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0]) * 100
+    else:
+        indicators['momentum'] = 0
+    
+    # Current price vs SMA signal
+    if indicators['sma'] is not None:
+        indicators['price_vs_sma'] = "ABOVE" if data['Close'].iloc[-1] > indicators['sma'] else "BELOW"
+    else:
+        indicators['price_vs_sma'] = "N/A"
+    
+    return indicators
+
+# Enhanced News API integration with multiple sources
+def get_news_headlines(symbol, max_headlines=5):
+    headlines = []
+    
+    # Method 1: Try Yahoo Finance RSS
+    try:
+        url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
+        resp = requests.get(url, timeout=10, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+        if resp.status_code == 200:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp.content)
+            for item in root.findall('.//item')[:max_headlines]:
+                title_elem = item.find('title')
+                if title_elem is not None and title_elem.text:
+                    headlines.append(f"- {title_elem.text}")
+    except Exception as e:
+        print(f"Yahoo RSS failed: {e}")
+    
+    # Method 2: Try Yahoo Finance ticker info for recent news
+    if not headlines:
+        try:
+            ticker = yf.Ticker(symbol)
+            news = ticker.news
+            if news:
+                for article in news[:max_headlines]:
+                    if 'title' in article:
+                        headlines.append(f"- {article['title']}")
+        except Exception as e:
+            print(f"Yahoo ticker news failed: {e}")
+    
+    # Method 3: Fallback - generate generic market context
+    if not headlines:
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            company_name = info.get('longName', symbol)
+            sector = info.get('sector', 'Unknown')
+            industry = info.get('industry', 'Unknown')
+            
+            headlines = [
+                f"- {company_name} operates in the {sector} sector",
+                f"- Company industry: {industry}",
+                f"- Recent market activity for {symbol} should be monitored",
+                f"- General market sentiment may impact {sector} stocks",
+                f"- Technical analysis recommended for {symbol} trading decisions"
+            ]
+        except Exception as e:
+            print(f"Fallback info failed: {e}")
+            headlines = [
+                f"- No recent news headlines available for {symbol}",
+                f"- Consider checking financial news websites for latest updates",
+                f"- Market analysis based on technical indicators recommended",
+                f"- General market conditions may affect stock performance"
+            ]
+    
+    return '\n'.join(headlines[:max_headlines])
+
+# Alternative: Simple market context function
+def get_market_context(symbol):
+    """Provide general market context when news is unavailable"""
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        
+        context_items = []
+        
+        # Company basics
+        if 'longName' in info:
+            context_items.append(f"- Company: {info['longName']}")
+        
+        if 'sector' in info:
+            context_items.append(f"- Sector: {info['sector']}")
+            
+        if 'industry' in info:
+            context_items.append(f"- Industry: {info['industry']}")
+        
+        # Market cap and size context
+        if 'marketCap' in info and info['marketCap']:
+            market_cap = info['marketCap']
+            if market_cap > 200_000_000_000:
+                context_items.append("- Large-cap stock with established market presence")
+            elif market_cap > 10_000_000_000:
+                context_items.append("- Mid-cap stock with growth potential")
+            else:
+                context_items.append("- Small-cap stock with higher volatility potential")
+        
+        # Performance context
+        if 'recommendationKey' in info:
+            context_items.append(f"- Analyst recommendation: {info['recommendationKey']}")
+        
+        return '\n'.join(context_items) if context_items else f"- General market analysis for {symbol}"
+        
+    except Exception:
+        return f"- Technical analysis recommended for {symbol}"
+
+def plot_stock_data(data, symbol):
+    plt.figure(figsize=(12, 6))
+    plt.plot(data.index, data['Close'], label='Close Price', color='blue')
+    plt.fill_between(data.index, data['Low'], data['High'], alpha=0.2, color='lightblue')
+    # Technical indicators
+    if len(data) >= 20:
+        sma = data['Close'].rolling(window=20).mean()
+        plt.plot(data.index, sma, label='SMA (20)', color='orange')
+    if len(data) >= 14:
+        # RSI is not plotted on price chart, but could be shown in a subplot
+        pass
+    plt.title(f'{symbol} Stock Price', fontsize=16)
+    plt.xlabel('Date', fontsize=12)
+    plt.ylabel('Price', fontsize=12)
+    plt.legend(fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    return plt
+
+def extract_recommendation(analysis):
+    match = re.search(r"RECOMMENDATION:\s*(BUY|SELL|HOLD)", analysis, re.IGNORECASE)
+    return match.group(1).upper() if match else "UNCLEAR"
+
+def analyze_stock(symbol, start_date, end_date):
+    data = get_stock_data(symbol, start_date, end_date)
+    if data.empty:
+        return {
+            "symbol": symbol,
+            "analysis": f"No data available for {symbol} in the specified date range.",
+            "recommendation": "UNCLEAR",
+            "plot": None,
+            "performance_metrics": {},
+        }
+    
+    start_price = data['Close'].iloc[0]
+    end_price = data['Close'].iloc[-1]
+    data_summary = data.describe().to_string()
+    
+    indicators = get_technical_indicators(data)
+    news_headlines = get_news_headlines(symbol)
+    if "No recent news headlines available" in news_headlines or not news_headlines.strip():
+        news_headlines = get_market_context(symbol)
+    
+    start_time = time.time()
+    analysis = stock_analysis_chain.run(
+        stock_data=data_summary,
+        stock_symbol=symbol,
+        start_date=start_date,
+        end_date=end_date,
+        start_price=f"{start_price:.2f}",
+        end_price=f"{end_price:.2f}",
+        sma=f"{indicators['sma']:.2f}" if indicators['sma'] is not None else "N/A",
+        rsi=f"{indicators['rsi']:.2f}" if indicators['rsi'] is not None else "N/A",
+        momentum=f"{indicators['momentum']:.2f}",
+        price_vs_sma=indicators['price_vs_sma'],
+        news_headlines=news_headlines
+    )
+    end_time = time.time()
+    inference_time = end_time - start_time
+    recommendation = extract_recommendation(analysis)
+    plot = plot_stock_data(data, symbol)
+    performance_metrics = {
+        "inference_time": f"{inference_time:.2f} seconds",
+        "token_count": len(analysis.split()),
+        "data_points": len(data)
+    }
+    return {
+        "symbol": symbol,
+        "analysis": analysis,
+        "recommendation": recommendation,
+        "plot": plot,
+        "performance_metrics": performance_metrics,
+    }
+
+# Multi-stock support: comma-separated symbols
+def gradio_interface(symbols, start_date, end_date):
+    symbol_list = [s.strip().upper() for s in symbols.split(',') if s.strip()]
+    all_analyses = []
+    all_recommendations = []
+    all_plots = []
+    all_inference_times = []
+    all_token_counts = []
+    all_data_points = []
+    for symbol in symbol_list:
+        result = analyze_stock(symbol, start_date, end_date)
+        all_analyses.append(f"[{symbol}]\n" + result["analysis"])
+        all_recommendations.append(f"[{symbol}] {result['recommendation']}")
+        all_plots.append(result["plot"])
+        pm = result["performance_metrics"]
+        all_inference_times.append(f"[{symbol}] LLM Inference Time: {pm.get('inference_time', 'N/A')}")
+        all_token_counts.append(f"[{symbol}] Token Count: {pm.get('token_count', 'N/A')}")
+        all_data_points.append(f"[{symbol}] Data Points: {pm.get('data_points', 'N/A')}")
+    # For plots, only show the first one if multiple
+    return (
+        '\n\n'.join(all_analyses),
+        '\n'.join(all_recommendations),
+        all_plots[0] if all_plots else None,
+        '\n'.join(all_inference_times),
+        '\n'.join(all_token_counts),
+        '\n'.join(all_data_points)
+    )
+
+# Create an enhanced Gradio interface
+iface = gr.Interface(
+    fn=gradio_interface,
+    inputs=[
+        gr.Textbox(label="Stock Symbol(s) (e.g., AAPL, MSFT)", placeholder="Enter one or more stock symbols, separated by commas..."),
+        gr.Textbox(label="Start Date (YYYY-MM-DD)", placeholder="Enter start date..."),
+        gr.Textbox(label="End Date (YYYY-MM-DD)", placeholder="Enter end date...")
+    ],
+    outputs=[
+        gr.Textbox(label="AI Analysis", lines=15),
+        gr.Textbox(label="Recommendation(s)"),
+        gr.Plot(label="Stock Price Chart (First Symbol)"),
+        gr.Textbox(label="LLM Inference Time(s)"),
+        gr.Textbox(label="Token Count(s)"),
+        gr.Textbox(label="Data Points Analyzed")
+    ],
+    title="🚀 Multi-Stock AI Analysis Tool with Technical Indicators & News Integration",
+    description="Enter one or more stock symbols and a date range to get AI-powered analysis, technical indicators, news sentiment, interactive price chart, recommendations, and performance metrics.",
+    theme="default",
+    css="""
+        .gradio-container {max-width: 900px; margin: auto;}
+        .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
+        .gr-button {background-color: #4CAF50; color: white;}
+        .gr-button:hover {background-color: #45a049;}
+    """
+)
+
+if __name__ == "__main__":
+    iface.launch(server_name="0.0.0.0")
