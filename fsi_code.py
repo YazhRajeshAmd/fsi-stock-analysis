@@ -98,7 +98,9 @@ Day Trader:
 - SELL: Reversal patterns, profit-taking levels reached, volume decline
 - HOLD: Consolidation, low volume, unclear technical signals
 
-At the end of your analysis, clearly state: "RECOMMENDATION FOR {investor_type}: [Your recommendation]"
+At the end of your analysis, clearly state: "RECOMMENDATION FOR {investor_type}: [BUY/SELL/HOLD]"
+
+Make sure your final recommendation is one of: BUY, SELL, or HOLD.
 
 Analysis:
 """
@@ -263,8 +265,30 @@ def plot_stock_data(data, symbol):
     return plt
 
 def extract_recommendation(analysis):
-    match = re.search(r"RECOMMENDATION:\s*(BUY|SELL|HOLD)", analysis, re.IGNORECASE)
-    return match.group(1).upper() if match else "UNCLEAR"
+    # Try multiple patterns to catch the recommendation
+    patterns = [
+        r"RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)",
+        r"RECOMMENDATION:\s*(BUY|SELL|HOLD)",
+        r"(BUY|SELL|HOLD)\s*(?:recommendation|decision|action)",
+        r"My recommendation.*?is\s*(BUY|SELL|HOLD)",
+        r"I recommend.*?(BUY|SELL|HOLD)",
+        r"Final.*?recommendation.*?(BUY|SELL|HOLD)"
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, analysis, re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1).upper()
+    
+    # If no explicit recommendation found, look for strong indicators
+    if re.search(r"(strong\s+buy|definitely\s+buy|recommend\s+buying)", analysis, re.IGNORECASE):
+        return "BUY"
+    elif re.search(r"(strong\s+sell|definitely\s+sell|recommend\s+selling)", analysis, re.IGNORECASE):
+        return "SELL"
+    elif re.search(r"(hold|maintain|keep|stay)", analysis, re.IGNORECASE):
+        return "HOLD"
+    
+    return "UNCLEAR"
 
 def analyze_stock(symbol, start_date, end_date, investor_type):
     data = get_stock_data(symbol, start_date, end_date)
