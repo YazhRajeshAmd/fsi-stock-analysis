@@ -13,17 +13,16 @@ import requests
 # Initialize Ollama with Llama3.1 - increased temperature for more varied responses
 llm = Ollama(model="llama3.1:70b", temperature=0.3)
 
-# Updated prompt template with momentum, price vs SMA, and investor type
+# Updated prompt template with momentum and price vs SMA
 stock_analysis_prompt = PromptTemplate(
-    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", "sma", "rsi", "news_headlines", "momentum", "price_vs_sma", "investor_type"],
+    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", "sma", "rsi", "news_headlines", "momentum", "price_vs_sma"],
     template="""
-You are a financial analyst AI. Analyze the following stock data and provide insights tailored to the investor profile:
+You are a financial analyst AI. Analyze the following stock data and provide insights:
 
 Stock Symbol: {stock_symbol}
 Date Range: {start_date} to {end_date}
 Starting Price: ${start_price}
 Ending Price: ${end_price}
-Investor Type: {investor_type}
 
 Stock Data:
 {stock_data}
@@ -37,68 +36,24 @@ Price vs SMA: {price_vs_sma}
 Recent News Headlines:
 {news_headlines}
 
-IMPORTANT: Tailor your analysis and recommendation specifically for a {investor_type}:
-
-Conservative Investor Profile:
-- Prioritizes capital preservation and steady income
-- Prefers established companies with strong fundamentals
-- Low risk tolerance, seeks dividend-paying stocks
-- Recommendation criteria: Strong balance sheet, consistent earnings, low volatility
-
-Moderate Investor Profile:
-- Balanced approach between growth and stability
-- Willing to accept moderate risk for better returns
-- Diversified portfolio with mix of growth and value stocks
-- Recommendation criteria: Good growth potential with reasonable risk
-
-Aggressive Investor Profile:
-- High risk tolerance, seeks maximum capital appreciation
-- Comfortable with volatility and market fluctuations
-- Focuses on growth stocks and emerging opportunities
-- Recommendation criteria: High growth potential, innovative companies
-
-Day Trader Profile:
-- Short-term trading focus (minutes to days)
-- Technical analysis driven decisions
-- High risk tolerance with quick profit/loss realization
-- Recommendation criteria: High volume, volatility, clear technical patterns
-
 Please provide a comprehensive analysis including:
 1. Overall trend of the stock price
 2. Key statistics (average price, highest price, lowest price)
-3. Technical indicator interpretation (SMA, RSI) specific to {investor_type}
+3. Technical indicator interpretation (SMA, RSI)
 4. Any notable events or patterns observed
 5. Volume analysis and its correlation with price changes
 6. Impact of recent news on the stock
-7. Risk assessment appropriate for {investor_type}
-8. Investment horizon considerations for {investor_type}
+7. Comparison of the start and end prices
+8. Any potential factors that might have influenced the stock's performance
 9. A brief outlook for the stock based on this historical data
 
-Based on your analysis and the {investor_type} profile, provide a clear recommendation: BUY, SELL, or HOLD.
+Based on your analysis, provide a clear recommendation: BUY, SELL, or HOLD.
+Use these guidelines:
+- BUY: Strong upward trend (momentum > 5%), price above SMA, RSI < 70, positive sentiment
+- SELL: Strong downward trend (momentum < -5%), price below SMA, RSI > 70, negative sentiment  
+- HOLD: Mixed signals, sideways trend (-5% <= momentum <= 5%), or insufficient data
 
-Use these guidelines adjusted for {investor_type}:
-
-Conservative Investor:
-- BUY: Stable upward trend, price above SMA, RSI 30-60, positive fundamentals, dividend yield
-- SELL: Declining trend with fundamental concerns, high volatility, RSI > 75
-- HOLD: Stable but uncertain outlook, maintain existing positions
-
-Moderate Investor:
-- BUY: Upward trend (momentum > 3%), price above SMA, RSI < 70, balanced risk/reward
-- SELL: Downward trend (momentum < -3%), price below SMA, RSI > 75, negative outlook
-- HOLD: Mixed signals, sideways trend (-3% <= momentum <= 3%)
-
-Aggressive Investor:
-- BUY: Strong momentum (> 5%), growth potential, breaking resistance levels
-- SELL: Severe downtrend (< -10%), breaking support levels, negative growth prospects
-- HOLD: Consolidation phase, waiting for breakout signals
-
-Day Trader:
-- BUY: Strong intraday momentum, high volume, clear technical breakout
-- SELL: Reversal patterns, profit-taking levels reached, volume decline
-- HOLD: Consolidation, low volume, unclear technical signals
-
-At the end of your analysis, clearly state: "RECOMMENDATION FOR {investor_type}: [Your recommendation]"
+At the end of your analysis, clearly state: "RECOMMENDATION: [Your recommendation]"
 
 Analysis:
 """
@@ -266,7 +221,7 @@ def extract_recommendation(analysis):
     match = re.search(r"RECOMMENDATION:\s*(BUY|SELL|HOLD)", analysis, re.IGNORECASE)
     return match.group(1).upper() if match else "UNCLEAR"
 
-def analyze_stock(symbol, start_date, end_date, investor_type):
+def analyze_stock(symbol, start_date, end_date):
     data = get_stock_data(symbol, start_date, end_date)
     if data.empty:
         return {
@@ -298,8 +253,7 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
         rsi=f"{indicators['rsi']:.2f}" if indicators['rsi'] is not None else "N/A",
         momentum=f"{indicators['momentum']:.2f}",
         price_vs_sma=indicators['price_vs_sma'],
-        news_headlines=news_headlines,
-        investor_type=investor_type
+        news_headlines=news_headlines
     )
     end_time = time.time()
     inference_time = end_time - start_time
@@ -319,7 +273,7 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     }
 
 # Multi-stock support: comma-separated symbols
-def gradio_interface(symbols, start_date, end_date, investor_type):
+def gradio_interface(symbols, start_date, end_date):
     symbol_list = [s.strip().upper() for s in symbols.split(',') if s.strip()]
     all_analyses = []
     all_recommendations = []
@@ -328,8 +282,8 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
     all_token_counts = []
     all_data_points = []
     for symbol in symbol_list:
-        result = analyze_stock(symbol, start_date, end_date, investor_type)
-        all_analyses.append(f"[{symbol} - {investor_type} Investor]\n" + result["analysis"])
+        result = analyze_stock(symbol, start_date, end_date)
+        all_analyses.append(f"[{symbol}]\n" + result["analysis"])
         all_recommendations.append(f"[{symbol}] {result['recommendation']}")
         all_plots.append(result["plot"])
         pm = result["performance_metrics"]
@@ -352,13 +306,7 @@ iface = gr.Interface(
     inputs=[
         gr.Textbox(label="Stock Symbol(s) (e.g., AAPL, MSFT)", placeholder="Enter one or more stock symbols, separated by commas..."),
         gr.Textbox(label="Start Date (YYYY-MM-DD)", placeholder="Enter start date..."),
-        gr.Textbox(label="End Date (YYYY-MM-DD)", placeholder="Enter end date..."),
-        gr.Dropdown(
-            choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
-            label="Investor Type",
-            value="Moderate",
-            info="Select your investment profile for personalized recommendations"
-        )
+        gr.Textbox(label="End Date (YYYY-MM-DD)", placeholder="Enter end date...")
     ],
     outputs=[
         gr.Textbox(label="AI Analysis", lines=15),
@@ -368,8 +316,8 @@ iface = gr.Interface(
         gr.Textbox(label="Token Count(s)"),
         gr.Textbox(label="Data Points Analyzed")
     ],
-    title="🚀 Personalized Multi-Stock AI Analysis Tool with Investor Profiles",
-    description="Enter one or more stock symbols, date range, and select your investor profile to get AI-powered analysis with personalized recommendations based on your risk tolerance and investment style.",
+    title="🚀 Multi-Stock AI Analysis Tool with Technical Indicators & News Integration",
+    description="Enter one or more stock symbols and a date range to get AI-powered analysis, technical indicators, news sentiment, interactive price chart, recommendations, and performance metrics.",
     theme="default",
     css="""
         .gradio-container {max-width: 900px; margin: auto;}
