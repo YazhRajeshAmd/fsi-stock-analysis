@@ -13,20 +13,121 @@ import requests
 # Initialize Ollama with Llama3.1 - increased temperature for more varied responses
 llm = Ollama(model="llama3.1:70b", temperature=0.3)
 
-# Updated prompt template with momentum, price vs SMA, and investor type
-stock_analysis_prompt = PromptTemplate(
-    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", "sma", "rsi", "news_headlines", "momentum", "price_vs_sma", "investor_type"],
-    template="""
-You are a financial analyst AI. Analyze the following stock data and provide insights tailored to the investor profile:
+# Benjamin Graham's Investment Principles from "The Intelligent Investor"
+GRAHAM_PRINCIPLES = {
+    "mr_market": """
+    Mr. Market Allegory (Chapter 8): Benjamin Graham's famous allegory describes the stock market as 
+    an emotionally unstable business partner named "Mr. Market" who offers to buy or sell shares 
+    at different prices every day. Sometimes these prices are reasonable, sometimes they're ridiculously 
+    high or low. The intelligent investor should:
+    - Use Mr. Market's mood swings to their advantage
+    - Buy when Mr. Market is pessimistic (prices low)
+    - Sell when Mr. Market is euphoric (prices high) 
+    - Ignore Mr. Market's daily offers and focus on business fundamentals
+    - Never feel compelled to trade just because Mr. Market made an offer
+    """,
+    
+    "margin_of_safety": """
+    Margin of Safety: Graham's most important concept - buying securities at a significant discount 
+    to their intrinsic value to protect against errors in judgment or unforeseen circumstances:
+    - Buy stocks trading at 2/3 or less of their intrinsic value
+    - This discount provides protection against losses
+    - Allows room for calculation errors and market volatility
+    - The cornerstone of intelligent investing
+    """,
+    
+    "intrinsic_value": """
+    Intrinsic Value Calculation: Graham's formula for determining a stock's true worth:
+    V = EPS × (8.5 + 2g) × 4.4/Y
+    Where: V = Intrinsic Value, EPS = Earnings Per Share, g = Growth Rate, Y = AAA Bond Yield
+    - Focus on earnings power, not market sentiment
+    - Look for stocks trading below calculated intrinsic value
+    - Base decisions on facts and analysis, not market emotions
+    """,
+    
+    "defensive_investing": """
+    Defensive vs. Enterprising Investor:
+    - Defensive: Seeks safety and reasonable returns with minimal effort
+    - Enterprising: Willing to devote time and care to obtain better results
+    - Both approaches can be successful with proper discipline
+    - Choose based on temperament and available time for analysis
+    """
+}
 
+def apply_graham_analysis(symbol, data, indicators, investor_type):
+    """Apply Benjamin Graham's principles to stock analysis"""
+    
+    current_price = data['Close'].iloc[-1]
+    
+    # Calculate basic Graham metrics
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        
+        # Basic Graham analysis
+        eps = info.get('trailingEps', 0)
+        growth_rate = info.get('earningsGrowth', 0) * 100 if info.get('earningsGrowth') else 0
+        pe_ratio = info.get('trailingPE', 0)
+        book_value = info.get('bookValue', 0)
+        debt_to_equity = info.get('debtToEquity', 0)
+        dividend_yield = info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0
+        
+        # Graham's Intrinsic Value Formula (simplified)
+        if eps > 0:
+            intrinsic_value = eps * (8.5 + (2 * growth_rate / 100)) if growth_rate > 0 else eps * 8.5
+        else:
+            intrinsic_value = 0
+        
+        # Margin of Safety calculation
+        if intrinsic_value > 0:
+            margin_of_safety = ((intrinsic_value - current_price) / intrinsic_value) * 100
+        else:
+            margin_of_safety = 0
+        
+        # Graham's criteria evaluation
+        graham_criteria = {
+            "earnings_stability": eps > 0,
+            "pe_reasonable": 0 < pe_ratio < 15 if pe_ratio else False,
+            "debt_acceptable": debt_to_equity < 50 if debt_to_equity else True,
+            "dividend_paying": dividend_yield > 0,
+            "margin_of_safety": margin_of_safety > 25,  # Graham preferred 33% but 25% is acceptable
+            "price_to_book": (current_price / book_value) < 1.5 if book_value > 0 else False
+        }
+        
+        return {
+            "intrinsic_value": intrinsic_value,
+            "margin_of_safety": margin_of_safety,
+            "graham_criteria": graham_criteria,
+            "eps": eps,
+            "pe_ratio": pe_ratio,
+            "book_value": book_value,
+            "debt_to_equity": debt_to_equity,
+            "dividend_yield": dividend_yield
+        }
+        
+    except Exception as e:
+        return {
+            "intrinsic_value": 0,
+            "margin_of_safety": 0,
+            "graham_criteria": {},
+            "error": str(e)
+        }
+
+# Updated prompt template focused on comprehensive AI analysis
+stock_analysis_prompt = PromptTemplate(
+    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", 
+                    "sma", "rsi", "news_headlines", "momentum", "price_vs_sma", "investor_type"],
+    template="""
+You are an advanced AI financial analyst powered by AMD MI300X GPU and ROCm platform, providing comprehensive stock analysis with cutting-edge computational capabilities.
+
+Stock Analysis Data:
 Stock Symbol: {stock_symbol}
 Date Range: {start_date} to {end_date}
 Starting Price: ${start_price}
 Ending Price: ${end_price}
 Investor Type: {investor_type}
 
-Stock Data:
-{stock_data}
+Stock Data Summary: {stock_data}
 
 Technical Indicators:
 SMA (20): {sma}
@@ -34,73 +135,80 @@ RSI (14): {rsi}
 Price Momentum: {momentum}%
 Price vs SMA: {price_vs_sma}
 
-Recent News Headlines:
-{news_headlines}
+Recent News Headlines: {news_headlines}
 
-IMPORTANT: Tailor your analysis and recommendation specifically for a {investor_type}:
+COMPREHENSIVE AI ANALYSIS FRAMEWORK:
 
-Conservative Investor Profile:
+For {investor_type} Investor Profile:
+
+Conservative Investor:
 - Prioritizes capital preservation and steady income
 - Prefers established companies with strong fundamentals
 - Low risk tolerance, seeks dividend-paying stocks
-- Recommendation criteria: Strong balance sheet, consistent earnings, low volatility
-
-Moderate Investor Profile:
-- Balanced approach between growth and stability
-- Willing to accept moderate risk for better returns
-- Diversified portfolio with mix of growth and value stocks
-- Recommendation criteria: Good growth potential with reasonable risk
-
-Aggressive Investor Profile:
-- High risk tolerance, seeks maximum capital appreciation
-- Comfortable with volatility and market fluctuations
-- Focuses on growth stocks and emerging opportunities
-- Recommendation criteria: High growth potential, innovative companies
-
-Day Trader Profile:
-- Short-term trading focus (minutes to days)
-- Technical analysis driven decisions
-- High risk tolerance with quick profit/loss realization
-- Recommendation criteria: High volume, volatility, clear technical patterns
-
-Please provide a comprehensive analysis including:
-1. Overall trend of the stock price
-2. Key statistics (average price, highest price, lowest price)
-3. Technical indicator interpretation (SMA, RSI) specific to {investor_type}
-4. Any notable events or patterns observed
-5. Volume analysis and its correlation with price changes
-6. Impact of recent news on the stock
-7. Risk assessment appropriate for {investor_type}
-8. Investment horizon considerations for {investor_type}
-9. A brief outlook for the stock based on this historical data
-
-Based on your analysis and the {investor_type} profile, provide a clear recommendation: BUY, SELL, or HOLD.
-
-Use these guidelines adjusted for {investor_type}:
-
-Conservative Investor:
-- BUY: Stable upward trend, price above SMA, RSI 30-60, positive fundamentals, dividend yield
-- SELL: Declining trend with fundamental concerns, high volatility, RSI > 75
-- HOLD: Stable but uncertain outlook, maintain existing positions
+- Focus on stability metrics and defensive sectors
 
 Moderate Investor:
-- BUY: Upward trend (momentum > 3%), price above SMA, RSI < 70, balanced risk/reward
-- SELL: Downward trend (momentum < -3%), price below SMA, RSI > 75, negative outlook
-- HOLD: Mixed signals, sideways trend (-3% <= momentum <= 3%)
+- Balanced approach between growth and stability
+- Willing to accept moderate risk for better returns
+- Diversified portfolio strategy
+- Growth potential with reasonable risk assessment
 
 Aggressive Investor:
-- BUY: Strong momentum (> 5%), growth potential, breaking resistance levels
-- SELL: Severe downtrend (< -10%), breaking support levels, negative growth prospects
-- HOLD: Consolidation phase, waiting for breakout signals
+- High risk tolerance, seeks maximum capital appreciation
+- Comfortable with volatility and market fluctuations
+- Focus on growth stocks and emerging opportunities
+- Innovation-driven investment decisions
 
 Day Trader:
-- BUY: Strong intraday momentum, high volume, clear technical breakout
-- SELL: Reversal patterns, profit-taking levels reached, volume decline
-- HOLD: Consolidation, low volume, unclear technical signals
+- Short-term trading focus (minutes to days)
+- Technical analysis and momentum-driven decisions
+- High-frequency trading considerations
+- Volume and volatility analysis
 
-At the end of your analysis, clearly state: "RECOMMENDATION FOR {investor_type}: [BUY/SELL/HOLD]"
+PROVIDE COMPREHENSIVE ANALYSIS INCLUDING:
 
-Make sure your final recommendation is one of: BUY, SELL, or HOLD.
+1. **Technical Analysis Deep Dive:**
+   - Price trend analysis and pattern recognition
+   - Moving averages and momentum indicators
+   - Support and resistance levels
+   - Volume analysis and market sentiment
+
+2. **Fundamental Analysis:**
+   - Company financial health assessment
+   - Industry position and competitive landscape
+   - Revenue growth trends and profitability metrics
+   - Market capitalization and valuation ratios
+
+3. **Market Sentiment & News Impact:**
+   - Recent news sentiment analysis
+   - Market conditions affecting the stock
+   - Sector performance comparison
+   - Economic indicators influence
+
+4. **Risk Assessment:**
+   - Volatility analysis and risk metrics
+   - Market correlation and beta analysis
+   - Downside protection and stop-loss levels
+   - Portfolio diversification considerations
+
+5. **Price Targets & Projections:**
+   - Technical price targets based on chart patterns
+   - Analyst consensus and price predictions
+   - Scenario analysis (bull/bear/base cases)
+   - Time horizon considerations for {investor_type}
+
+6. **Investment Strategy Recommendations:**
+   - Position sizing recommendations
+   - Entry and exit strategies
+   - Risk management protocols
+   - Portfolio allocation suggestions
+
+Provide detailed analysis with specific data points, percentages, and actionable insights tailored for {investor_type} investment style.
+
+End with a clear, confident recommendation:
+"AI RECOMMENDATION FOR {investor_type}: [BUY/SELL/HOLD]"
+
+Include your confidence level (High/Medium/Low) and key reasoning behind the recommendation.
 
 Analysis:
 """
@@ -265,14 +373,16 @@ def plot_stock_data(data, symbol):
     return plt
 
 def extract_recommendation(analysis):
-    # Try multiple patterns to catch the recommendation
+    # Try multiple patterns to catch the recommendation, focusing on AI recommendations
     patterns = [
+        r"AI RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)",
         r"RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)",
         r"RECOMMENDATION:\s*(BUY|SELL|HOLD)",
         r"(BUY|SELL|HOLD)\s*(?:recommendation|decision|action)",
         r"My recommendation.*?is\s*(BUY|SELL|HOLD)",
         r"I recommend.*?(BUY|SELL|HOLD)",
-        r"Final.*?recommendation.*?(BUY|SELL|HOLD)"
+        r"Final.*?recommendation.*?(BUY|SELL|HOLD)",
+        r"GRAHAM-INSPIRED RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)"
     ]
     
     for pattern in patterns:
@@ -306,6 +416,30 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     data_summary = data.describe().to_string()
     
     indicators = get_technical_indicators(data)
+    
+    # Apply Benjamin Graham's analysis
+    graham_analysis = apply_graham_analysis(symbol, data, indicators, investor_type)
+    
+    # Format Graham analysis for the prompt
+    graham_analysis_text = f"""
+    Benjamin Graham Value Analysis:
+    - Current Price: ${end_price:.2f}
+    - Estimated Intrinsic Value: ${graham_analysis.get('intrinsic_value', 0):.2f}
+    - Margin of Safety: {graham_analysis.get('margin_of_safety', 0):.1f}%
+    - EPS: ${graham_analysis.get('eps', 0):.2f}
+    - P/E Ratio: {graham_analysis.get('pe_ratio', 'N/A')}
+    - Book Value: ${graham_analysis.get('book_value', 0):.2f}
+    - Debt-to-Equity: {graham_analysis.get('debt_to_equity', 0):.1f}%
+    - Dividend Yield: {graham_analysis.get('dividend_yield', 0):.2f}%
+    
+    Graham's Investment Criteria Evaluation:
+    """
+    
+    criteria = graham_analysis.get('graham_criteria', {})
+    for criterion, passed in criteria.items():
+        status = "✓ PASS" if passed else "✗ FAIL"
+        graham_analysis_text += f"    - {criterion.replace('_', ' ').title()}: {status}\n"
+    
     news_headlines = get_news_headlines(symbol)
     if "No recent news headlines available" in news_headlines or not news_headlines.strip():
         news_headlines = get_market_context(symbol)
@@ -337,6 +471,7 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     return {
         "symbol": symbol,
         "analysis": analysis,
+        "graham_analysis_formatted": graham_analysis_text,
         "recommendation": recommendation,
         "plot": plot,
         "performance_metrics": performance_metrics,
@@ -346,6 +481,7 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
 def gradio_interface(symbols, start_date, end_date, investor_type):
     symbol_list = [s.strip().upper() for s in symbols.split(',') if s.strip()]
     all_analyses = []
+    all_graham_analyses = []
     all_recommendations = []
     all_plots = []
     all_inference_times = []
@@ -354,6 +490,7 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
     for symbol in symbol_list:
         result = analyze_stock(symbol, start_date, end_date, investor_type)
         all_analyses.append(f"[{symbol} - {investor_type} Investor]\n" + result["analysis"])
+        all_graham_analyses.append(f"[{symbol}]\n" + result["graham_analysis_formatted"])
         all_recommendations.append(f"[{symbol}] {result['recommendation']}")
         all_plots.append(result["plot"])
         pm = result["performance_metrics"]
@@ -363,6 +500,7 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
     # For plots, only show the first one if multiple
     return (
         '\n\n'.join(all_analyses),
+        '\n\n'.join(all_graham_analyses),
         '\n'.join(all_recommendations),
         all_plots[0] if all_plots else None,
         '\n'.join(all_inference_times),
@@ -370,7 +508,7 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
         '\n'.join(all_data_points)
     )
 
-# Create an enhanced Gradio interface
+# Create an enhanced Gradio interface with Benjamin Graham's principles
 iface = gr.Interface(
     fn=gradio_interface,
     inputs=[
@@ -385,21 +523,50 @@ iface = gr.Interface(
         )
     ],
     outputs=[
-        gr.Textbox(label="AI Analysis", lines=15),
+        gr.Textbox(label="AI Technical & Market Analysis", lines=15),
+        gr.Textbox(label="Benjamin Graham Value Analysis", lines=10),
         gr.Textbox(label="Recommendation(s)"),
         gr.Plot(label="Stock Price Chart (First Symbol)"),
         gr.Textbox(label="LLM Inference Time(s)"),
         gr.Textbox(label="Token Count(s)"),
         gr.Textbox(label="Data Points Analyzed")
     ],
-    title="🚀 Personalized Multi-Stock AI Analysis Tool with Investor Profiles",
-    description="Enter one or more stock symbols, date range, and select your investor profile to get AI-powered analysis with personalized recommendations based on your risk tolerance and investment style.",
+    title="AMD MI300X ROCm-Powered Financial Analysis Tool",
+    description="""
+    **Powered by AMD Instinct MI300X GPU and ROCm Platform**
+    
+    This advanced financial analysis tool leverages AMD's cutting-edge MI300X GPU architecture with ROCm (Radix Open Compute Platform) 
+    to deliver high-performance AI-driven stock analysis. The system combines:
+
+    • **AMD MI300X Architecture**: World's most advanced accelerated processing unit with 192GB HBM3 memory
+
+    • **ROCm Software Stack**: Open-source platform enabling GPU acceleration for AI workloads
+
+    • **HIP Programming**: Heterogeneous-compute Interface for Portability optimizing performance
+
+    • **Ollama Integration**: Efficient large language model inference on AMD hardware
+
+    • **Real-time Analysis**: GPU-accelerated technical indicators and market data processing
+
+    • **Multi-Stock Support**: Parallel processing capabilities for portfolio analysis
+
+    
+    The MI300X's unified memory architecture and ROCm's optimized libraries enable seamless execution of complex 
+    financial models, delivering faster insights for investment decisions. With support for multiple investor profiles 
+    and comprehensive technical analysis, this tool represents the next generation of GPU-accelerated financial technology.
+    
+    *"The intelligent investor is a realist who sells to optimists and buys from pessimists."* - Benjamin Graham
+    
+    Enter stock symbols, date range, and select your investor profile to experience AMD-powered financial analysis.
+    """,
     theme="default",
     css="""
-        .gradio-container {max-width: 900px; margin: auto;}
+        .gradio-container {max-width: 1000px; margin: auto;}
         .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
-        .gr-button {background-color: #4CAF50; color: white;}
-        .gr-button:hover {background-color: #45a049;}
+        .gr-button {background-color: #2E8B57; color: white; font-weight: bold;}
+        .gr-button:hover {background-color: #228B22;}
+        .description {font-size: 14px; line-height: 1.6;}
+        h1 {color: #2E8B57; text-align: center;}
     """
 )
 
