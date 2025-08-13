@@ -599,15 +599,46 @@ def create_interface():
                     lines=2
                 )
                 
-                start_date_input = gr.Textbox(
-                    label="Start Date (YYYY-MM-DD)", 
-                    placeholder="Enter start date..."
-                )
+                # Date selection with calendar pickers
+                gr.Markdown("#### 📅 Date Selection")
+                with gr.Row():
+                    with gr.Column():
+                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>")
+                        start_date_input = gr.HTML(
+                            value=f"""
+                            <div style="margin-bottom: 10px;">
+                                <input type="date" id="start_date_calendar" 
+                                       value="2024-08-13"
+                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
+                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
+                                       onchange="updateStartDate(this.value)">
+                            </div>
+                            <input type="hidden" id="start_date_value" value="2024-08-13">
+                            """,
+                            elem_id="start_date_container"
+                        )
+                    
+                    with gr.Column():
+                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>")
+                        end_date_input = gr.HTML(
+                            value=f"""
+                            <div style="margin-bottom: 10px;">
+                                <input type="date" id="end_date_calendar" 
+                                       value="2025-08-13"
+                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
+                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
+                                       onchange="updateEndDate(this.value)">
+                            </div>
+                            <input type="hidden" id="end_date_value" value="2025-08-13">
+                            """,
+                            elem_id="end_date_container"
+                        )
                 
-                end_date_input = gr.Textbox(
-                    label="End Date (YYYY-MM-DD)", 
-                    placeholder="Enter end date..."
-                )
+                # Hidden textboxes to capture the date values for the function
+                start_date_hidden = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
+                end_date_hidden = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
                 
                 investor_type_input = gr.Dropdown(
                     choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
@@ -652,10 +683,55 @@ def create_interface():
                             token_count_output = gr.Textbox(label="Token Count(s)", interactive=False)
                             data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False)
         
+        # Add JavaScript for calendar functionality
+        gr.HTML("""
+        <script>
+        function updateStartDate(value) {
+            const hiddenInput = document.getElementById('start_date_hidden');
+            if (hiddenInput) {
+                hiddenInput.value = value;
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        
+        function updateEndDate(value) {
+            const hiddenInput = document.getElementById('end_date_hidden');
+            if (hiddenInput) {
+                hiddenInput.value = value;
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        
+        // Set initial date limits
+        document.addEventListener('DOMContentLoaded', function() {
+            const startDate = document.getElementById('start_date_calendar');
+            const endDate = document.getElementById('end_date_calendar');
+            
+            if (startDate && endDate) {
+                // Set reasonable date limits
+                startDate.min = '2020-01-01';
+                startDate.max = new Date().toISOString().split('T')[0];
+                
+                endDate.min = '2020-01-01';
+                endDate.max = new Date().toISOString().split('T')[0];
+                
+                // Sync dates when one changes
+                startDate.addEventListener('change', function() {
+                    endDate.min = this.value;
+                });
+                
+                endDate.addEventListener('change', function() {
+                    startDate.max = this.value;
+                });
+            }
+        });
+        </script>
+        """)
+        
         # Event handlers
         analyze_btn.click(
             fn=gradio_interface,
-            inputs=[symbols_input, start_date_input, end_date_input, investor_type_input],
+            inputs=[symbols_input, start_date_hidden, end_date_hidden, investor_type_input],
             outputs=[
                 ai_analysis_output,
                 graham_analysis_output,
