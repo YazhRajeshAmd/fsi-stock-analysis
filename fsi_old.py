@@ -370,38 +370,176 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
         '\n'.join(all_data_points)
     )
 
-# Create an enhanced Gradio interface
-iface = gr.Interface(
-    fn=gradio_interface,
-    inputs=[
-        gr.Textbox(label="Stock Symbol(s) (e.g., AAPL, MSFT)", placeholder="Enter one or more stock symbols, separated by commas..."),
-        gr.Textbox(label="Start Date (YYYY-MM-DD)", placeholder="Enter start date..."),
-        gr.Textbox(label="End Date (YYYY-MM-DD)", placeholder="Enter end date..."),
-        gr.Dropdown(
-            choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
-            label="Investor Type",
-            value="Moderate",
-            info="Select your investment profile for personalized recommendations"
-        )
-    ],
-    outputs=[
-        gr.Textbox(label="AI Analysis", lines=15),
-        gr.Textbox(label="Recommendation(s)"),
-        gr.Plot(label="Stock Price Chart (First Symbol)"),
-        gr.Textbox(label="LLM Inference Time(s)"),
-        gr.Textbox(label="Token Count(s)"),
-        gr.Textbox(label="Data Points Analyzed")
-    ],
-    title="🚀 Personalized Multi-Stock AI Analysis Tool with Investor Profiles",
-    description="Enter one or more stock symbols, date range, and select your investor profile to get AI-powered analysis with personalized recommendations based on your risk tolerance and investment style.",
-    theme="default",
-    css="""
-        .gradio-container {max-width: 900px; margin: auto;}
-        .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
-        .gr-button {background-color: #4CAF50; color: white;}
-        .gr-button:hover {background-color: #45a049;}
+# Create an enhanced Gradio interface with AMD branding
+def create_interface():
+    # Custom CSS for AMD branding
+    custom_css = """
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+    
+    /* AMD Red accent color */
+    .primary {
+        background: linear-gradient(135deg, #ED1C24 0%, #B71C1C 100%) !important;
+        border: none !important;
+    }
+    
+    .primary:hover {
+        background: linear-gradient(135deg, #B71C1C 0%, #8B0000 100%) !important;
+    }
+    
+    /* Tab styling with AMD red */
+    .tab-nav button.selected {
+        color: #ED1C24 !important;
+        border-bottom: 2px solid #ED1C24 !important;
+    }
+    
+    /* Headers with AMD red accents */
+    h1, h2, h3 {
+        color: #2c3e50 !important;
+    }
+    
+    /* Input focus states with AMD red */
+    input:focus, textarea:focus, select:focus {
+        border-color: #ED1C24 !important;
+        box-shadow: 0 0 0 2px rgba(237, 28, 36, 0.1) !important;
+    }
+    
+    /* Links and accents */
+    a {
+        color: #ED1C24 !important;
+    }
+    
+    /* Section headers */
+    h3 {
+        border-left: 4px solid #ED1C24 !important;
+        padding-left: 12px !important;
+    }
+    
+    .gradio-container {max-width: 1200px; margin: auto;}
+    .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
     """
-)
+    
+    with gr.Blocks(title="🚀 Personalized Multi-Stock AI Analysis Tool with Investor Profiles", theme=gr.themes.Soft(), css=custom_css) as interface:
+        # Header with AMD logo in top right corner
+        gr.HTML("""
+            <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
+                <div style="padding-right: 120px;">
+                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700;">🚀 Personalized Multi-Stock AI Analysis Tool</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #ED1C24; font-size: 1.2em; font-weight: 600;">Powered by AMD MI300X with Investor Profile Customization</h3>
+                </div>
+            </div>
+        """)
+        
+        gr.Markdown("""
+            **AI-Powered Stock Analysis with Personalized Investment Profiles**
+            
+            Get comprehensive stock analysis tailored to your investment style and risk tolerance. 
+            This tool provides personalized recommendations based on your investor profile, powered by 
+            AMD's advanced GPU acceleration.
+
+            ### Key Features:
+            - **Multi-Stock Analysis**: Analyze multiple stocks simultaneously
+            - **Personalized Profiles**: Tailored analysis for Conservative, Moderate, Aggressive, and Day Trader styles
+            - **Technical Indicators**: SMA, RSI, momentum analysis
+            - **Real-time News Integration**: Latest market headlines and sentiment
+            - **GPU Acceleration**: Fast processing with AMD hardware
+            
+            Enter one or more stock symbols, date range, and select your investor profile to get personalized recommendations.
+        """)
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("### 📊 Analysis Configuration")
+                
+                symbols_input = gr.Textbox(
+                    label="Stock Symbol(s) (e.g., AAPL, MSFT)", 
+                    placeholder="Enter one or more stock symbols, separated by commas...",
+                    lines=2
+                )
+                
+                start_date_input = gr.Textbox(
+                    label="Start Date (YYYY-MM-DD)", 
+                    placeholder="Enter start date..."
+                )
+                
+                end_date_input = gr.Textbox(
+                    label="End Date (YYYY-MM-DD)", 
+                    placeholder="Enter end date..."
+                )
+                
+                investor_type_input = gr.Dropdown(
+                    choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
+                    label="Investor Type",
+                    value="Moderate",
+                    info="Select your investment profile for personalized recommendations"
+                )
+                
+                analyze_btn = gr.Button("📈 Analyze Stocks", variant="primary", size="lg")
+            
+            with gr.Column(scale=2):
+                gr.Markdown("### 📈 Analysis Results")
+                
+                with gr.Tabs():
+                    with gr.TabItem("🤖 AI Analysis"):
+                        ai_analysis_output = gr.Textbox(
+                            label="AI Analysis", 
+                            lines=15,
+                            interactive=False
+                        )
+                    
+                    with gr.TabItem("💡 Recommendations"):
+                        recommendations_output = gr.Textbox(
+                            label="Investment Recommendations",
+                            lines=8,
+                            interactive=False
+                        )
+                    
+                    with gr.TabItem("📊 Price Chart"):
+                        chart_output = gr.Plot(label="Stock Price Chart (First Symbol)")
+                    
+                    with gr.TabItem("⚡ Performance Metrics"):
+                        with gr.Row():
+                            inference_time_output = gr.Textbox(label="LLM Inference Time(s)", interactive=False)
+                            token_count_output = gr.Textbox(label="Token Count(s)", interactive=False)
+                            data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False)
+        
+        # Event handlers
+        analyze_btn.click(
+            fn=gradio_interface,
+            inputs=[symbols_input, start_date_input, end_date_input, investor_type_input],
+            outputs=[
+                ai_analysis_output,
+                recommendations_output,
+                chart_output,
+                inference_time_output,
+                token_count_output,
+                data_points_output
+            ]
+        )
+        
+        # Example section
+        gr.Markdown("""
+            ### 💡 Example Usage
+            1. Enter stock symbols (e.g., "AAPL, MSFT, GOOGL")
+            2. Set your analysis date range
+            3. Select your investor profile based on your risk tolerance
+            4. Click "Analyze Stocks" to get personalized analysis
+            5. Review AI-generated insights tailored to your investment style
+            
+            ### 📊 Investor Profiles
+            - **Conservative**: Capital preservation, dividend focus, low risk
+            - **Moderate**: Balanced growth and stability approach
+            - **Aggressive**: High growth potential, higher risk tolerance
+            - **Day Trader**: Short-term technical analysis focus
+        """)
+    
+    return interface
+
+iface = create_interface()
 
 if __name__ == "__main__":
     iface.launch(server_name="0.0.0.0")
