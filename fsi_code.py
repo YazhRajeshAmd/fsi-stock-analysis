@@ -510,64 +510,153 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
 
 # Create an enhanced Gradio interface with Benjamin Graham's principles
 def create_interface():
-    # Custom CSS for AMD branding
+    # Custom CSS for Teal branding
     custom_css = """
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;500;600;700&display=swap');
     
     * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        font-family: 'Arial', Arial, sans-serif !important;
     }
     
-    /* AMD Red accent color */
+    /* Teal accent color - PMS 3115 C */
     .primary {
-        background: linear-gradient(135deg, #ED1C24 0%, #B71C1C 100%) !important;
+        background: linear-gradient(135deg, #00C2DE 0%, #008AA8 100%) !important;
         border: none !important;
     }
     
     .primary:hover {
-        background: linear-gradient(135deg, #B71C1C 0%, #8B0000 100%) !important;
+        background: linear-gradient(135deg, #008AA8 0%, #006A80 100%) !important;
     }
     
-    /* Tab styling with AMD red */
+    /* Tab styling with Teal */
     .tab-nav button.selected {
-        color: #ED1C24 !important;
-        border-bottom: 2px solid #ED1C24 !important;
+        color: #00C2DE !important;
+        border-bottom: 2px solid #00C2DE !important;
     }
     
-    /* Headers with AMD red accents */
+    /* Headers with Teal accents */
     h1, h2, h3 {
         color: #2c3e50 !important;
     }
     
-    /* Input focus states with AMD red */
+    /* Input focus states with Teal */
     input:focus, textarea:focus, select:focus {
-        border-color: #ED1C24 !important;
-        box-shadow: 0 0 0 2px rgba(237, 28, 36, 0.1) !important;
+        border-color: #00C2DE !important;
+        box-shadow: 0 0 0 2px rgba(0, 194, 222, 0.1) !important;
     }
     
     /* Links and accents */
     a {
-        color: #ED1C24 !important;
+        color: #00C2DE !important;
     }
     
     /* Section headers */
     h3 {
-        border-left: 4px solid #ED1C24 !important;
+        border-left: 4px solid #00C2DE !important;
         padding-left: 12px !important;
     }
     
-    .gradio-container {max-width: 1200px; margin: auto;}
+    /* Increased container width to accommodate horizontal tabs */
+    .gradio-container {
+        max-width: 1600px !important; 
+        margin: auto !important;
+        width: 100% !important;
+    }
+    
+    /* Simplified tab styling - ensure visibility */
+    .gradio-tabs {
+        width: 100% !important;
+        background: transparent !important;
+    }
+    
+    /* Tab navigation styling */
+    .gradio-tabs .tab-nav,
+    .gradio-tabs > div:first-child {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        background: #f8f9fa !important;
+        padding: 10px !important;
+        border-radius: 10px !important;
+        margin-bottom: 15px !important;
+        width: 100% !important;
+    }
+    
+    /* Individual tab buttons */
+    .gradio-tabs .tab-nav button,
+    .gradio-tabs > div:first-child > button {
+        flex: 1 !important;
+        min-width: 160px !important;
+        max-width: 220px !important;
+        padding: 10px 12px !important;
+        border-radius: 6px !important;
+        border: 2px solid #e0e0e0 !important;
+        background: white !important;
+        color: #666 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .gradio-tabs .tab-nav button:hover {
+        border-color: #00C2DE !important;
+        color: #00C2DE !important;
+        background: rgba(0, 194, 222, 0.05) !important;
+    }
+    
+    .gradio-tabs .tab-nav button.selected {
+        background: #00C2DE !important;
+        color: white !important;
+        border-color: #00C2DE !important;
+    }
+    
+    /* Hide dropdown menu and force horizontal display */
+    .gradio-tabs .tab-nav .tab-nav-button,
+    .gradio-tabs button[aria-label="More tabs"],
+    .gradio-tabs .tab-nav button:last-child[style*="display: none"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Force all tab buttons to be visible */
+    .gradio-tabs .tab-nav button {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Ensure all tabs are visible and container uses full width */
+    .gradio-tabs .tab-nav {
+        height: auto !important;
+        max-height: none !important;
+        width: 100% !important;
+    }
+    
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
+    
+    /* Performance metrics styling */
+    .performance-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+        border: 2px solid #00C2DE !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        margin-top: 20px !important;
+    }
     """
     
-    with gr.Blocks(title="AMD MI300X ROCm-Powered Financial Analysis Tool", theme=gr.themes.Soft(), css=custom_css) as interface:
+    with gr.Blocks(title="AMD Instinct ROCm-Powered Financial Analysis Tool", theme=gr.themes.Soft(), css=custom_css) as interface:
         # Header with AMD logo in top right corner
         gr.HTML("""
             <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
                 <div style="padding-right: 120px;">
-                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700;">💼 AMD MI300X Financial Analysis System</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #ED1C24; font-size: 1.2em; font-weight: 600;">Powered by ROCm Platform & Benjamin Graham's Investment Principles</h3>
+                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct Financial Analysis System</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform & Benjamin Graham's Investment Principles</h3>
                 </div>
             </div>
         """)
@@ -575,17 +664,17 @@ def create_interface():
         gr.Markdown("""
             **Advanced AI-Driven Stock Analysis on AMD Hardware**
             
-            This cutting-edge financial analysis tool leverages AMD's MI300X GPU architecture with ROCm platform 
+            This cutting-edge financial analysis tool leverages AMD's Instinct GPU architecture with ROCm platform 
             to deliver high-performance AI-driven stock analysis, combining Benjamin Graham's timeless investment 
             principles with modern GPU acceleration.
 
             ### Key Features:
-            - **AMD MI300X Architecture**: 192GB HBM3 memory for complex financial modeling
+            - **AMD Instinct Architecture**: High HBM3 memory for complex financial modeling
             - **ROCm Software Stack**: Open-source GPU acceleration platform
             - **Benjamin Graham Analysis**: Value investing principles from "The Intelligent Investor"
             - **Real-time Processing**: GPU-accelerated technical indicators and market data
             - **Multi-Stock Portfolio Analysis**: Parallel processing capabilities
-            
+
             *"The intelligent investor is a realist who sells to optimists and buys from pessimists."* - Benjamin Graham
         """)
         
@@ -667,23 +756,28 @@ def create_interface():
                             interactive=False
                         )
                     
-                    with gr.TabItem("💡 Recommendations"):
+                    with gr.TabItem("💡 Buy/Sell/Hold Recommendations"):
                         recommendations_output = gr.Textbox(
                             label="Investment Recommendations",
                             lines=8,
                             interactive=False
                         )
                     
-                    with gr.TabItem("📊 Price Chart"):
+                    with gr.TabItem("📊 Stock Charts & Price Analysis"):
                         chart_output = gr.Plot(label="Stock Price Chart (First Symbol)")
-                    
-                    with gr.TabItem("⚡ Performance Metrics"):
-                        with gr.Row():
-                            inference_time_output = gr.Textbox(label="LLM Inference Time(s)", interactive=False)
-                            token_count_output = gr.Textbox(label="Token Count(s)", interactive=False)
-                            data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False)
         
-        # Add JavaScript for calendar functionality
+        # Performance Metrics moved down below main interface
+        with gr.Row():
+            with gr.Column():
+                gr.HTML('<div class="performance-section">')
+                gr.Markdown("### ⚡ System Performance Metrics")
+                with gr.Row():
+                    inference_time_output = gr.Textbox(label="LLM Inference Time (s)", interactive=False, scale=1)
+                    token_count_output = gr.Textbox(label="Token Count", interactive=False, scale=1)
+                    data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False, scale=1)
+                gr.HTML('</div>')
+        
+        # Add JavaScript for calendar functionality and horizontal tabs
         gr.HTML("""
         <script>
         function updateStartDate(value) {
@@ -702,30 +796,114 @@ def create_interface():
             }
         }
         
-        // Set initial date limits
+        // Simple approach to ensure tabs are visible
+        function ensureTabsVisible() {
+            // Find all tab containers
+            const tabContainers = document.querySelectorAll('.gradio-tabs');
+            tabContainers.forEach(container => {
+                // Find the tab navigation area
+                const tabNav = container.querySelector('div:first-child');
+                if (tabNav) {
+                    // Simple flex layout
+                    tabNav.style.display = 'flex';
+                    tabNav.style.flexWrap = 'nowrap';
+                    tabNav.style.gap = '8px';
+                    tabNav.style.width = '100%';
+                    
+                    // Make all buttons visible
+                    const buttons = tabNav.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        if (!btn.textContent.includes('...') && btn.textContent.trim() !== '') {
+                            btn.style.display = 'block';
+                            btn.style.visibility = 'visible';
+                            btn.style.flex = '1';
+                        } else {
+                            btn.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Run after DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            const startDate = document.getElementById('start_date_calendar');
-            const endDate = document.getElementById('end_date_calendar');
-            
-            if (startDate && endDate) {
-                // Set reasonable date limits
-                startDate.min = '2020-01-01';
-                startDate.max = new Date().toISOString().split('T')[0];
-                
-                endDate.min = '2020-01-01';
-                endDate.max = new Date().toISOString().split('T')[0];
-                
-                // Sync dates when one changes
-                startDate.addEventListener('change', function() {
-                    endDate.min = this.value;
-                });
-                
-                endDate.addEventListener('change', function() {
-                    startDate.max = this.value;
-                });
-            }
+            setTimeout(ensureTabsVisible, 500);
+            setTimeout(ensureTabsVisible, 1500);
         });
         </script>
+        """)
+        
+        # Add additional CSS to ensure tabs display properly
+        gr.HTML("""
+        <style>
+        /* Force tab navigation to be visible */
+        .gradio-tabs .tab-nav,
+        .gradio-tabs > div:first-child {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            background: #f8f9fa !important;
+            padding: 12px !important;
+            border-radius: 8px !important;
+            margin-bottom: 10px !important;
+            gap: 8px !important;
+            border: 1px solid #e0e0e0 !important;
+            min-height: 50px !important;
+        }
+        
+        /* Make tab buttons clearly visible */
+        .gradio-tabs .tab-nav button,
+        .gradio-tabs > div:first-child > button {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            flex: 1 !important;
+            min-width: 150px !important;
+            max-width: 200px !important;
+            height: auto !important;
+            padding: 8px 12px !important;
+            background: white !important;
+            border: 2px solid #e0e0e0 !important;
+            border-radius: 6px !important;
+            color: #333 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            text-align: center !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        /* Tab button hover and active states */
+        .gradio-tabs .tab-nav button:hover,
+        .gradio-tabs > div:first-child > button:hover {
+            border-color: #00C2DE !important;
+            background: rgba(0, 194, 222, 0.1) !important;
+            color: #00C2DE !important;
+        }
+        
+        .gradio-tabs .tab-nav button.selected,
+        .gradio-tabs > div:first-child > button.selected,
+        .gradio-tabs .tab-nav button[aria-selected="true"],
+        .gradio-tabs > div:first-child > button[aria-selected="true"] {
+            background: #00C2DE !important;
+            border-color: #00C2DE !important;
+            color: white !important;
+        }
+        
+        /* Hide dropdown buttons completely */
+        .gradio-tabs button[aria-label*="More"],
+        .gradio-tabs .tab-nav-button {
+            display: none !important;
+        }
+        
+        /* Ensure tab content area has proper styling */
+        .gradio-tabs > div:nth-child(2) {
+            background: transparent !important;
+            border: none !important;
+            margin-top: 10px !important;
+        }
+        </style>
         """)
         
         # Event handlers
@@ -751,12 +929,9 @@ def create_interface():
             3. Select your investor profile (Conservative, Moderate, Aggressive, Day Trader)
             4. Click "Analyze Stocks" to start GPU-accelerated analysis
             5. Review results across different analysis perspectives
-            
-            ### 🚀 AMD MI300X Advantages
-            - **Unified Memory Architecture**: Seamless data processing for complex financial models
-            - **HIP Programming**: Optimized performance for heterogeneous computing
-            - **Parallel Processing**: Simultaneous analysis of multiple stocks
-            - **Real-time Insights**: Faster decision-making with GPU acceleration
+
+            ### Disclaimer
+            This tool is for educational purposes only. Always conduct your own research and consult with a financial advisor before making investment decisions.
         """)
     
     return interface

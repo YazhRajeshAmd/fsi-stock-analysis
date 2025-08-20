@@ -1,0 +1,23 @@
+# Minimal FSI Requirements - Core packages that should work
+
+# ML and GPU acceleration
+torch
+# vllm  # Uncomment this line to enable vLLM (requires proper installation)
+
+# Financial data and analysis
+yfinance>=0.2.18
+pandas>=1.5.0
+numpy>=1.21.0
+scipy>=1.9.0
+
+# Visualization and UI
+gradio>=3.50.0
+plotly>=5.0.0
+matplotlib>=3.5.0
+
+# Data processing and utilities
+requests>=2.28.0
+python-dateutil>=2.8.0
+
+# Basic ML (optional)
+scikit-learn>=1.1.0
