@@ -638,15 +638,6 @@ def create_interface():
     }
     
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
-    
-    /* Performance metrics styling */
-    .performance-section {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
-        border: 2px solid #00C2DE !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        margin-top: 20px !important;
-    }
     """
     
     with gr.Blocks(title="AMD Instinct ROCm-Powered Financial Analysis Tool", theme=gr.themes.Soft(), css=custom_css) as interface:
@@ -769,13 +760,11 @@ def create_interface():
         # Performance Metrics moved down below main interface
         with gr.Row():
             with gr.Column():
-                gr.HTML('<div class="performance-section">')
                 gr.Markdown("### ⚡ System Performance Metrics")
                 with gr.Row():
                     inference_time_output = gr.Textbox(label="LLM Inference Time (s)", interactive=False, scale=1)
                     token_count_output = gr.Textbox(label="Token Count", interactive=False, scale=1)
                     data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False, scale=1)
-                gr.HTML('</div>')
         
         # Add JavaScript for calendar functionality and horizontal tabs
         gr.HTML("""
