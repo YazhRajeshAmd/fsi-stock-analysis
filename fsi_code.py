@@ -640,29 +640,27 @@ def create_interface():
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
     """
     
-    with gr.Blocks(title="AMD Instinct ROCm-Powered Financial Analysis Tool", theme=gr.themes.Soft(), css=custom_css) as interface:
+    with gr.Blocks(title="AMD Instinct ROCm-Powered Financial Analysis Demo", theme=gr.themes.Soft(), css=custom_css) as interface:
         # Header with AMD logo in top right corner
         gr.HTML("""
             <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
                 <div style="padding-right: 120px;">
-                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct Financial Analysis System</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform & Benjamin Graham's Investment Principles</h3>
+                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct Financial Analysis Demo</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform</h3>
                 </div>
             </div>
         """)
         
         gr.Markdown("""
-            **Advanced AI-Driven Stock Analysis on AMD Hardware**
+            **Advanced AI-Driven Stock Analysis Demo on AMD Hardware**
             
             This cutting-edge financial analysis tool leverages AMD's Instinct GPU architecture with ROCm platform 
-            to deliver high-performance AI-driven stock analysis, combining Benjamin Graham's timeless investment 
-            principles with modern GPU acceleration.
+            to deliver high-performance AI-driven stock analysis.
 
             ### Key Features:
             - **AMD Instinct Architecture**: High HBM3 memory for complex financial modeling
             - **ROCm Software Stack**: Open-source GPU acceleration platform
-            - **Benjamin Graham Analysis**: Value investing principles from "The Intelligent Investor"
             - **Real-time Processing**: GPU-accelerated technical indicators and market data
             - **Multi-Stock Portfolio Analysis**: Parallel processing capabilities
 
