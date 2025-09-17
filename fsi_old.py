@@ -13,20 +13,21 @@ import requests
 # Initialize Ollama with Llama3.1 - increased temperature for more varied responses
 llm = Ollama(model="llama3.1:70b", temperature=0.3)
 
-# Updated prompt template with momentum, price vs SMA, and investor type
+# Updated prompt template focused on comprehensive AI analysis
 stock_analysis_prompt = PromptTemplate(
-    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", "sma", "rsi", "news_headlines", "momentum", "price_vs_sma", "investor_type"],
+    input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", 
+                    "sma", "rsi", "news_headlines", "momentum", "price_vs_sma", "investor_type"],
     template="""
-You are a financial analyst AI. Analyze the following stock data and provide insights tailored to the investor profile:
+You are an advanced AI financial analyst powered by AMD MI300X GPU and ROCm platform, providing comprehensive stock analysis with cutting-edge computational capabilities.
 
+Stock Analysis Data:
 Stock Symbol: {stock_symbol}
 Date Range: {start_date} to {end_date}
 Starting Price: ${start_price}
 Ending Price: ${end_price}
 Investor Type: {investor_type}
 
-Stock Data:
-{stock_data}
+Stock Data Summary: {stock_data}
 
 Technical Indicators:
 SMA (20): {sma}
@@ -34,73 +35,80 @@ RSI (14): {rsi}
 Price Momentum: {momentum}%
 Price vs SMA: {price_vs_sma}
 
-Recent News Headlines:
-{news_headlines}
+Recent News Headlines: {news_headlines}
 
-IMPORTANT: Tailor your analysis and recommendation specifically for a {investor_type}:
+COMPREHENSIVE AI ANALYSIS FRAMEWORK:
 
-Conservative Investor Profile:
+For {investor_type} Investor Profile:
+
+Conservative Investor:
 - Prioritizes capital preservation and steady income
 - Prefers established companies with strong fundamentals
 - Low risk tolerance, seeks dividend-paying stocks
-- Recommendation criteria: Strong balance sheet, consistent earnings, low volatility
-
-Moderate Investor Profile:
-- Balanced approach between growth and stability
-- Willing to accept moderate risk for better returns
-- Diversified portfolio with mix of growth and value stocks
-- Recommendation criteria: Good growth potential with reasonable risk
-
-Aggressive Investor Profile:
-- High risk tolerance, seeks maximum capital appreciation
-- Comfortable with volatility and market fluctuations
-- Focuses on growth stocks and emerging opportunities
-- Recommendation criteria: High growth potential, innovative companies
-
-Day Trader Profile:
-- Short-term trading focus (minutes to days)
-- Technical analysis driven decisions
-- High risk tolerance with quick profit/loss realization
-- Recommendation criteria: High volume, volatility, clear technical patterns
-
-Please provide a comprehensive analysis including:
-1. Overall trend of the stock price
-2. Key statistics (average price, highest price, lowest price)
-3. Technical indicator interpretation (SMA, RSI) specific to {investor_type}
-4. Any notable events or patterns observed
-5. Volume analysis and its correlation with price changes
-6. Impact of recent news on the stock
-7. Risk assessment appropriate for {investor_type}
-8. Investment horizon considerations for {investor_type}
-9. A brief outlook for the stock based on this historical data
-
-Based on your analysis and the {investor_type} profile, provide a clear recommendation: BUY, SELL, or HOLD.
-
-Use these guidelines adjusted for {investor_type}:
-
-Conservative Investor:
-- BUY: Stable upward trend, price above SMA, RSI 30-60, positive fundamentals, dividend yield
-- SELL: Declining trend with fundamental concerns, high volatility, RSI > 75
-- HOLD: Stable but uncertain outlook, maintain existing positions
+- Focus on stability metrics and defensive sectors
 
 Moderate Investor:
-- BUY: Upward trend (momentum > 3%), price above SMA, RSI < 70, balanced risk/reward
-- SELL: Downward trend (momentum < -3%), price below SMA, RSI > 75, negative outlook
-- HOLD: Mixed signals, sideways trend (-3% <= momentum <= 3%)
+- Balanced approach between growth and stability
+- Willing to accept moderate risk for better returns
+- Diversified portfolio strategy
+- Growth potential with reasonable risk assessment
 
 Aggressive Investor:
-- BUY: Strong momentum (> 5%), growth potential, breaking resistance levels
-- SELL: Severe downtrend (< -10%), breaking support levels, negative growth prospects
-- HOLD: Consolidation phase, waiting for breakout signals
+- High risk tolerance, seeks maximum capital appreciation
+- Comfortable with volatility and market fluctuations
+- Focus on growth stocks and emerging opportunities
+- Innovation-driven investment decisions
 
 Day Trader:
-- BUY: Strong intraday momentum, high volume, clear technical breakout
-- SELL: Reversal patterns, profit-taking levels reached, volume decline
-- HOLD: Consolidation, low volume, unclear technical signals
+- Short-term trading focus (minutes to days)
+- Technical analysis and momentum-driven decisions
+- High-frequency trading considerations
+- Volume and volatility analysis
 
-At the end of your analysis, clearly state: "RECOMMENDATION FOR {investor_type}: [BUY/SELL/HOLD]"
+PROVIDE COMPREHENSIVE ANALYSIS INCLUDING:
 
-Make sure your final recommendation is one of: BUY, SELL, or HOLD.
+1. **Technical Analysis Deep Dive:**
+   - Price trend analysis and pattern recognition
+   - Moving averages and momentum indicators
+   - Support and resistance levels
+   - Volume analysis and market sentiment
+
+2. **Fundamental Analysis:**
+   - Company financial health assessment
+   - Industry position and competitive landscape
+   - Revenue growth trends and profitability metrics
+   - Market capitalization and valuation ratios
+
+3. **Market Sentiment & News Impact:**
+   - Recent news sentiment analysis
+   - Market conditions affecting the stock
+   - Sector performance comparison
+   - Economic indicators influence
+
+4. **Risk Assessment:**
+   - Volatility analysis and risk metrics
+   - Market correlation and beta analysis
+   - Downside protection and stop-loss levels
+   - Portfolio diversification considerations
+
+5. **Price Targets & Projections:**
+   - Technical price targets based on chart patterns
+   - Analyst consensus and price predictions
+   - Scenario analysis (bull/bear/base cases)
+   - Time horizon considerations for {investor_type}
+
+6. **Investment Strategy Recommendations:**
+   - Position sizing recommendations
+   - Entry and exit strategies
+   - Risk management protocols
+   - Portfolio allocation suggestions
+
+Provide detailed analysis with specific data points, percentages, and actionable insights tailored for {investor_type} investment style.
+
+End with a clear, confident recommendation:
+"AI RECOMMENDATION FOR {investor_type}: [BUY/SELL/HOLD]"
+
+Include your confidence level (High/Medium/Low) and key reasoning behind the recommendation.
 
 Analysis:
 """
@@ -265,14 +273,16 @@ def plot_stock_data(data, symbol):
     return plt
 
 def extract_recommendation(analysis):
-    # Try multiple patterns to catch the recommendation
+    # Try multiple patterns to catch the recommendation, focusing on AI recommendations
     patterns = [
+        r"AI RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)",
         r"RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)",
         r"RECOMMENDATION:\s*(BUY|SELL|HOLD)",
         r"(BUY|SELL|HOLD)\s*(?:recommendation|decision|action)",
         r"My recommendation.*?is\s*(BUY|SELL|HOLD)",
         r"I recommend.*?(BUY|SELL|HOLD)",
-        r"Final.*?recommendation.*?(BUY|SELL|HOLD)"
+        r"Final.*?recommendation.*?(BUY|SELL|HOLD)",
+        r"GRAHAM-INSPIRED RECOMMENDATION FOR [^:]+:\s*(BUY|SELL|HOLD)"
     ]
     
     for pattern in patterns:
@@ -306,10 +316,11 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     data_summary = data.describe().to_string()
     
     indicators = get_technical_indicators(data)
+    
     news_headlines = get_news_headlines(symbol)
     if "No recent news headlines available" in news_headlines or not news_headlines.strip():
         news_headlines = get_market_context(symbol)
-    
+
     start_time = time.time()
     analysis = stock_analysis_chain.run(
         stock_data=data_summary,
@@ -370,85 +381,162 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
         '\n'.join(all_data_points)
     )
 
-# Create an enhanced Gradio interface with AMD branding
+# Create an enhanced Gradio interface
 def create_interface():
-    # Custom CSS for AMD branding
+    # Custom CSS for Teal branding
     custom_css = """
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;500;600;700&display=swap');
     
     * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        font-family: 'Arial', Arial, sans-serif !important;
     }
     
-    /* AMD Red accent color */
+    /* Teal accent color - PMS 3115 C */
     .primary {
-        background: linear-gradient(135deg, #ED1C24 0%, #B71C1C 100%) !important;
+        background: linear-gradient(135deg, #00C2DE 0%, #008AA8 100%) !important;
         border: none !important;
     }
     
     .primary:hover {
-        background: linear-gradient(135deg, #B71C1C 0%, #8B0000 100%) !important;
+        background: linear-gradient(135deg, #008AA8 0%, #006A80 100%) !important;
     }
     
-    /* Tab styling with AMD red */
+    /* Tab styling with Teal */
     .tab-nav button.selected {
-        color: #ED1C24 !important;
-        border-bottom: 2px solid #ED1C24 !important;
+        color: #00C2DE !important;
+        border-bottom: 2px solid #00C2DE !important;
     }
     
-    /* Headers with AMD red accents */
+    /* Headers with Teal accents */
     h1, h2, h3 {
         color: #2c3e50 !important;
     }
     
-    /* Input focus states with AMD red */
+    /* Input focus states with Teal */
     input:focus, textarea:focus, select:focus {
-        border-color: #ED1C24 !important;
-        box-shadow: 0 0 0 2px rgba(237, 28, 36, 0.1) !important;
+        border-color: #00C2DE !important;
+        box-shadow: 0 0 0 2px rgba(0, 194, 222, 0.1) !important;
     }
     
     /* Links and accents */
     a {
-        color: #ED1C24 !important;
+        color: #00C2DE !important;
     }
     
     /* Section headers */
     h3 {
-        border-left: 4px solid #ED1C24 !important;
+        border-left: 4px solid #00C2DE !important;
         padding-left: 12px !important;
     }
     
-    .gradio-container {max-width: 1200px; margin: auto;}
+    /* Increased container width to accommodate horizontal tabs */
+    .gradio-container {
+        max-width: 1600px !important; 
+        margin: auto !important;
+        width: 100% !important;
+    }
+    
+    /* Simplified tab styling - ensure visibility */
+    .gradio-tabs {
+        width: 100% !important;
+        background: transparent !important;
+    }
+    
+    /* Tab navigation styling */
+    .gradio-tabs .tab-nav,
+    .gradio-tabs > div:first-child {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        background: #f8f9fa !important;
+        padding: 10px !important;
+        border-radius: 10px !important;
+        margin-bottom: 15px !important;
+        width: 100% !important;
+    }
+    
+    /* Individual tab buttons */
+    .gradio-tabs .tab-nav button,
+    .gradio-tabs > div:first-child > button {
+        flex: 1 !important;
+        min-width: 160px !important;
+        max-width: 220px !important;
+        padding: 10px 12px !important;
+        border-radius: 6px !important;
+        border: 2px solid #e0e0e0 !important;
+        background: white !important;
+        color: #666 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .gradio-tabs .tab-nav button:hover {
+        border-color: #00C2DE !important;
+        color: #00C2DE !important;
+        background: rgba(0, 194, 222, 0.05) !important;
+    }
+    
+    .gradio-tabs .tab-nav button.selected {
+        background: #00C2DE !important;
+        color: white !important;
+        border-color: #00C2DE !important;
+    }
+    
+    /* Hide dropdown menu and force horizontal display */
+    .gradio-tabs .tab-nav .tab-nav-button,
+    .gradio-tabs button[aria-label="More tabs"],
+    .gradio-tabs .tab-nav button:last-child[style*="display: none"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Force all tab buttons to be visible */
+    .gradio-tabs .tab-nav button {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Ensure all tabs are visible and container uses full width */
+    .gradio-tabs .tab-nav {
+        height: auto !important;
+        max-height: none !important;
+        width: 100% !important;
+    }
+    
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
     """
     
-    with gr.Blocks(title="🚀 Personalized Multi-Stock AI Analysis Tool with Investor Profiles", theme=gr.themes.Soft(), css=custom_css) as interface:
+    with gr.Blocks(title="AMD Instinct MI3xx ROCm-Powered Financial Analysis Demo", theme=gr.themes.Soft(), css=custom_css) as interface:
         # Header with AMD logo in top right corner
         gr.HTML("""
             <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
                 <div style="padding-right: 120px;">
-                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700;">🚀 Personalized Multi-Stock AI Analysis Tool</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #ED1C24; font-size: 1.2em; font-weight: 600;">Powered by AMD MI300X with Investor Profile Customization</h3>
+                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct ROCm-Powered Financial Analysis Demo</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform </h3>
                 </div>
             </div>
         """)
         
         gr.Markdown("""
-            **AI-Powered Stock Analysis with Personalized Investment Profiles**
+            **Advanced AI-Driven Stock Analysis on AMD Hardware**
             
-            Get comprehensive stock analysis tailored to your investment style and risk tolerance. 
-            This tool provides personalized recommendations based on your investor profile, powered by 
-            AMD's advanced GPU acceleration.
+            This cutting-edge financial analysis tool leverages AMD's Instinct GPU architecture with ROCm platform 
+            to deliver high-performance AI-driven stock analysis with modern GPU acceleration.
 
             ### Key Features:
-            - **Multi-Stock Analysis**: Analyze multiple stocks simultaneously
-            - **Personalized Profiles**: Tailored analysis for Conservative, Moderate, Aggressive, and Day Trader styles
-            - **Technical Indicators**: SMA, RSI, momentum analysis
-            - **Real-time News Integration**: Latest market headlines and sentiment
-            - **GPU Acceleration**: Fast processing with AMD hardware
-            
-            Enter one or more stock symbols, date range, and select your investor profile to get personalized recommendations.
+            - **AMD Instinct Architecture**: High HBM3 memory for complex financial modeling
+            - **ROCm Software Stack**: Open-source GPU acceleration platform
+            - **Real-time Processing**: GPU-accelerated technical indicators and market data
+            - **Multi-Stock Portfolio Analysis**: Parallel processing capabilities
+
         """)
         
         with gr.Row():
@@ -461,15 +549,46 @@ def create_interface():
                     lines=2
                 )
                 
-                start_date_input = gr.Textbox(
-                    label="Start Date (YYYY-MM-DD)", 
-                    placeholder="Enter start date..."
-                )
+                # Date selection with calendar pickers
+                gr.Markdown("#### 📅 Date Selection")
+                with gr.Row():
+                    with gr.Column():
+                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>")
+                        start_date_input = gr.HTML(
+                            value=f"""
+                            <div style="margin-bottom: 10px;">
+                                <input type="date" id="start_date_calendar" 
+                                       value="2024-08-13"
+                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
+                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
+                                       onchange="updateStartDate(this.value)">
+                            </div>
+                            <input type="hidden" id="start_date_value" value="2024-08-13">
+                            """,
+                            elem_id="start_date_container"
+                        )
+                    
+                    with gr.Column():
+                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>")
+                        end_date_input = gr.HTML(
+                            value=f"""
+                            <div style="margin-bottom: 10px;">
+                                <input type="date" id="end_date_calendar" 
+                                       value="2025-08-13"
+                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
+                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
+                                       onchange="updateEndDate(this.value)">
+                            </div>
+                            <input type="hidden" id="end_date_value" value="2025-08-13">
+                            """,
+                            elem_id="end_date_container"
+                        )
                 
-                end_date_input = gr.Textbox(
-                    label="End Date (YYYY-MM-DD)", 
-                    placeholder="Enter end date..."
-                )
+                # Hidden textboxes to capture the date values for the function
+                start_date_hidden = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
+                end_date_hidden = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
                 
                 investor_type_input = gr.Dropdown(
                     choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
@@ -478,39 +597,171 @@ def create_interface():
                     info="Select your investment profile for personalized recommendations"
                 )
                 
-                analyze_btn = gr.Button("📈 Analyze Stocks", variant="primary", size="lg")
+                analyze_btn = gr.Button("🚀 Analyze Stocks", variant="primary", size="lg")
             
             with gr.Column(scale=2):
                 gr.Markdown("### 📈 Analysis Results")
                 
                 with gr.Tabs():
-                    with gr.TabItem("🤖 AI Analysis"):
+                    with gr.TabItem("🤖 AI Technical Analysis"):
                         ai_analysis_output = gr.Textbox(
-                            label="AI Analysis", 
+                            label="AI Technical & Market Analysis", 
                             lines=15,
                             interactive=False
                         )
                     
-                    with gr.TabItem("💡 Recommendations"):
+                    with gr.TabItem("💡 Buy/Sell/Hold Recommendations"):
                         recommendations_output = gr.Textbox(
                             label="Investment Recommendations",
                             lines=8,
                             interactive=False
                         )
                     
-                    with gr.TabItem("📊 Price Chart"):
+                    with gr.TabItem("📊 Stock Charts & Price Analysis"):
                         chart_output = gr.Plot(label="Stock Price Chart (First Symbol)")
+        
+        # Performance Metrics moved down below main interface
+        with gr.Row():
+            with gr.Column():
+                gr.Markdown("### ⚡ System Performance Metrics")
+                with gr.Row():
+                    inference_time_output = gr.Textbox(label="LLM Inference Time (s)", interactive=False, scale=1)
+                    token_count_output = gr.Textbox(label="Token Count", interactive=False, scale=1)
+                    data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False, scale=1)
+        
+        # Add JavaScript for calendar functionality and horizontal tabs
+        gr.HTML("""
+        <script>
+        function updateStartDate(value) {
+            const hiddenInput = document.getElementById('start_date_hidden');
+            if (hiddenInput) {
+                hiddenInput.value = value;
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        
+        function updateEndDate(value) {
+            const hiddenInput = document.getElementById('end_date_hidden');
+            if (hiddenInput) {
+                hiddenInput.value = value;
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        
+        // Simple approach to ensure tabs are visible
+        function ensureTabsVisible() {
+            // Find all tab containers
+            const tabContainers = document.querySelectorAll('.gradio-tabs');
+            tabContainers.forEach(container => {
+                // Find the tab navigation area
+                const tabNav = container.querySelector('div:first-child');
+                if (tabNav) {
+                    // Simple flex layout
+                    tabNav.style.display = 'flex';
+                    tabNav.style.flexWrap = 'nowrap';
+                    tabNav.style.gap = '8px';
+                    tabNav.style.width = '100%';
                     
-                    with gr.TabItem("⚡ Performance Metrics"):
-                        with gr.Row():
-                            inference_time_output = gr.Textbox(label="LLM Inference Time(s)", interactive=False)
-                            token_count_output = gr.Textbox(label="Token Count(s)", interactive=False)
-                            data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False)
+                    // Make all buttons visible
+                    const buttons = tabNav.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        if (!btn.textContent.includes('...') && btn.textContent.trim() !== '') {
+                            btn.style.display = 'block';
+                            btn.style.visibility = 'visible';
+                            btn.style.flex = '1';
+                        } else {
+                            btn.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Run after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(ensureTabsVisible, 500);
+            setTimeout(ensureTabsVisible, 1500);
+        });
+        </script>
+        """)
+        
+        # Add additional CSS to ensure tabs display properly
+        gr.HTML("""
+        <style>
+        /* Force tab navigation to be visible */
+        .gradio-tabs .tab-nav,
+        .gradio-tabs > div:first-child {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            background: #f8f9fa !important;
+            padding: 12px !important;
+            border-radius: 8px !important;
+            margin-bottom: 10px !important;
+            gap: 8px !important;
+            border: 1px solid #e0e0e0 !important;
+            min-height: 50px !important;
+        }
+        
+        /* Make tab buttons clearly visible */
+        .gradio-tabs .tab-nav button,
+        .gradio-tabs > div:first-child > button {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            flex: 1 !important;
+            min-width: 150px !important;
+            max-width: 200px !important;
+            height: auto !important;
+            padding: 8px 12px !important;
+            background: white !important;
+            border: 2px solid #e0e0e0 !important;
+            border-radius: 6px !important;
+            color: #333 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            text-align: center !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        /* Tab button hover and active states */
+        .gradio-tabs .tab-nav button:hover,
+        .gradio-tabs > div:first-child > button:hover {
+            border-color: #00C2DE !important;
+            background: rgba(0, 194, 222, 0.1) !important;
+            color: #00C2DE !important;
+        }
+        
+        .gradio-tabs .tab-nav button.selected,
+        .gradio-tabs > div:first-child > button.selected,
+        .gradio-tabs .tab-nav button[aria-selected="true"],
+        .gradio-tabs > div:first-child > button[aria-selected="true"] {
+            background: #00C2DE !important;
+            border-color: #00C2DE !important;
+            color: white !important;
+        }
+        
+        /* Hide dropdown buttons completely */
+        .gradio-tabs button[aria-label*="More"],
+        .gradio-tabs .tab-nav-button {
+            display: none !important;
+        }
+        
+        /* Ensure tab content area has proper styling */
+        .gradio-tabs > div:nth-child(2) {
+            background: transparent !important;
+            border: none !important;
+            margin-top: 10px !important;
+        }
+        </style>
+        """)
         
         # Event handlers
         analyze_btn.click(
             fn=gradio_interface,
-            inputs=[symbols_input, start_date_input, end_date_input, investor_type_input],
+            inputs=[symbols_input, start_date_hidden, end_date_hidden, investor_type_input],
             outputs=[
                 ai_analysis_output,
                 recommendations_output,
@@ -526,15 +777,12 @@ def create_interface():
             ### 💡 Example Usage
             1. Enter stock symbols (e.g., "AAPL, MSFT, GOOGL")
             2. Set your analysis date range
-            3. Select your investor profile based on your risk tolerance
-            4. Click "Analyze Stocks" to get personalized analysis
-            5. Review AI-generated insights tailored to your investment style
-            
-            ### 📊 Investor Profiles
-            - **Conservative**: Capital preservation, dividend focus, low risk
-            - **Moderate**: Balanced growth and stability approach
-            - **Aggressive**: High growth potential, higher risk tolerance
-            - **Day Trader**: Short-term technical analysis focus
+            3. Select your investor profile (Conservative, Moderate, Aggressive, Day Trader)
+            4. Click "Analyze Stocks" to start GPU-accelerated analysis
+            5. Review results across different analysis perspectives
+
+            ### Disclaimer
+            This tool is for educational purposes only. Always conduct your own research and consult with a financial advisor before making investment decisions.
         """)
     
     return interface
