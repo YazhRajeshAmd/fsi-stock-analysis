@@ -58,7 +58,7 @@ A sophisticated financial analysis tool that combines real-time stock data, tech
 
 4. Run the application:
    ```bash
-   python fsi_code.py
+   python FSI_StockAnalysis.py
    ```
 
 5. Open your browser and navigate to the provided Gradio URL (typically `http://127.0.0.1:7860`)
