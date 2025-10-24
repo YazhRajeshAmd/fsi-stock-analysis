@@ -13,106 +13,6 @@ import requests
 # Initialize Ollama with Llama3.1 - increased temperature for more varied responses
 llm = Ollama(model="llama3.1:70b", temperature=0.3)
 
-# Benjamin Graham's Investment Principles from "The Intelligent Investor"
-GRAHAM_PRINCIPLES = {
-    "mr_market": """
-    Mr. Market Allegory (Chapter 8): Benjamin Graham's famous allegory describes the stock market as 
-    an emotionally unstable business partner named "Mr. Market" who offers to buy or sell shares 
-    at different prices every day. Sometimes these prices are reasonable, sometimes they're ridiculously 
-    high or low. The intelligent investor should:
-    - Use Mr. Market's mood swings to their advantage
-    - Buy when Mr. Market is pessimistic (prices low)
-    - Sell when Mr. Market is euphoric (prices high) 
-    - Ignore Mr. Market's daily offers and focus on business fundamentals
-    - Never feel compelled to trade just because Mr. Market made an offer
-    """,
-    
-    "margin_of_safety": """
-    Margin of Safety: Graham's most important concept - buying securities at a significant discount 
-    to their intrinsic value to protect against errors in judgment or unforeseen circumstances:
-    - Buy stocks trading at 2/3 or less of their intrinsic value
-    - This discount provides protection against losses
-    - Allows room for calculation errors and market volatility
-    - The cornerstone of intelligent investing
-    """,
-    
-    "intrinsic_value": """
-    Intrinsic Value Calculation: Graham's formula for determining a stock's true worth:
-    V = EPS × (8.5 + 2g) × 4.4/Y
-    Where: V = Intrinsic Value, EPS = Earnings Per Share, g = Growth Rate, Y = AAA Bond Yield
-    - Focus on earnings power, not market sentiment
-    - Look for stocks trading below calculated intrinsic value
-    - Base decisions on facts and analysis, not market emotions
-    """,
-    
-    "defensive_investing": """
-    Defensive vs. Enterprising Investor:
-    - Defensive: Seeks safety and reasonable returns with minimal effort
-    - Enterprising: Willing to devote time and care to obtain better results
-    - Both approaches can be successful with proper discipline
-    - Choose based on temperament and available time for analysis
-    """
-}
-
-def apply_graham_analysis(symbol, data, indicators, investor_type):
-    """Apply Benjamin Graham's principles to stock analysis"""
-    
-    current_price = data['Close'].iloc[-1]
-    
-    # Calculate basic Graham metrics
-    try:
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
-        
-        # Basic Graham analysis
-        eps = info.get('trailingEps', 0)
-        growth_rate = info.get('earningsGrowth', 0) * 100 if info.get('earningsGrowth') else 0
-        pe_ratio = info.get('trailingPE', 0)
-        book_value = info.get('bookValue', 0)
-        debt_to_equity = info.get('debtToEquity', 0)
-        dividend_yield = info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0
-        
-        # Graham's Intrinsic Value Formula (simplified)
-        if eps > 0:
-            intrinsic_value = eps * (8.5 + (2 * growth_rate / 100)) if growth_rate > 0 else eps * 8.5
-        else:
-            intrinsic_value = 0
-        
-        # Margin of Safety calculation
-        if intrinsic_value > 0:
-            margin_of_safety = ((intrinsic_value - current_price) / intrinsic_value) * 100
-        else:
-            margin_of_safety = 0
-        
-        # Graham's criteria evaluation
-        graham_criteria = {
-            "earnings_stability": eps > 0,
-            "pe_reasonable": 0 < pe_ratio < 15 if pe_ratio else False,
-            "debt_acceptable": debt_to_equity < 50 if debt_to_equity else True,
-            "dividend_paying": dividend_yield > 0,
-            "margin_of_safety": margin_of_safety > 25,  # Graham preferred 33% but 25% is acceptable
-            "price_to_book": (current_price / book_value) < 1.5 if book_value > 0 else False
-        }
-        
-        return {
-            "intrinsic_value": intrinsic_value,
-            "margin_of_safety": margin_of_safety,
-            "graham_criteria": graham_criteria,
-            "eps": eps,
-            "pe_ratio": pe_ratio,
-            "book_value": book_value,
-            "debt_to_equity": debt_to_equity,
-            "dividend_yield": dividend_yield
-        }
-        
-    except Exception as e:
-        return {
-            "intrinsic_value": 0,
-            "margin_of_safety": 0,
-            "graham_criteria": {},
-            "error": str(e)
-        }
-
 # Updated prompt template focused on comprehensive AI analysis
 stock_analysis_prompt = PromptTemplate(
     input_variables=["stock_data", "stock_symbol", "start_date", "end_date", "start_price", "end_price", 
@@ -417,33 +317,10 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     
     indicators = get_technical_indicators(data)
     
-    # Apply Benjamin Graham's analysis
-    graham_analysis = apply_graham_analysis(symbol, data, indicators, investor_type)
-    
-    # Format Graham analysis for the prompt
-    graham_analysis_text = f"""
-    Benjamin Graham Value Analysis:
-    - Current Price: ${end_price:.2f}
-    - Estimated Intrinsic Value: ${graham_analysis.get('intrinsic_value', 0):.2f}
-    - Margin of Safety: {graham_analysis.get('margin_of_safety', 0):.1f}%
-    - EPS: ${graham_analysis.get('eps', 0):.2f}
-    - P/E Ratio: {graham_analysis.get('pe_ratio', 'N/A')}
-    - Book Value: ${graham_analysis.get('book_value', 0):.2f}
-    - Debt-to-Equity: {graham_analysis.get('debt_to_equity', 0):.1f}%
-    - Dividend Yield: {graham_analysis.get('dividend_yield', 0):.2f}%
-    
-    Graham's Investment Criteria Evaluation:
-    """
-    
-    criteria = graham_analysis.get('graham_criteria', {})
-    for criterion, passed in criteria.items():
-        status = "✓ PASS" if passed else "✗ FAIL"
-        graham_analysis_text += f"    - {criterion.replace('_', ' ').title()}: {status}\n"
-    
     news_headlines = get_news_headlines(symbol)
     if "No recent news headlines available" in news_headlines or not news_headlines.strip():
         news_headlines = get_market_context(symbol)
-    
+
     start_time = time.time()
     analysis = stock_analysis_chain.run(
         stock_data=data_summary,
@@ -471,7 +348,6 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
     return {
         "symbol": symbol,
         "analysis": analysis,
-        "graham_analysis_formatted": graham_analysis_text,
         "recommendation": recommendation,
         "plot": plot,
         "performance_metrics": performance_metrics,
@@ -481,7 +357,6 @@ def analyze_stock(symbol, start_date, end_date, investor_type):
 def gradio_interface(symbols, start_date, end_date, investor_type):
     symbol_list = [s.strip().upper() for s in symbols.split(',') if s.strip()]
     all_analyses = []
-    all_graham_analyses = []
     all_recommendations = []
     all_plots = []
     all_inference_times = []
@@ -490,17 +365,20 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
     for symbol in symbol_list:
         result = analyze_stock(symbol, start_date, end_date, investor_type)
         all_analyses.append(f"[{symbol} - {investor_type} Investor]\n" + result["analysis"])
-        all_graham_analyses.append(f"[{symbol}]\n" + result["graham_analysis_formatted"])
         all_recommendations.append(f"[{symbol}] {result['recommendation']}")
         all_plots.append(result["plot"])
         pm = result["performance_metrics"]
         all_inference_times.append(f"[{symbol}] LLM Inference Time: {pm.get('inference_time', 'N/A')}")
         all_token_counts.append(f"[{symbol}] Token Count: {pm.get('token_count', 'N/A')}")
         all_data_points.append(f"[{symbol}] Data Points: {pm.get('data_points', 'N/A')}")
+    print(f"\n🕒 User-selected date range:")
+    print(f"   Start Date: {start_date}")
+    print(f"   End Date:   {end_date}")
+    print(f"   Investor Type: {investor_type}")
+    print(f"   Symbols: {symbols}\n")
     # For plots, only show the first one if multiple
     return (
         '\n\n'.join(all_analyses),
-        '\n\n'.join(all_graham_analyses),
         '\n'.join(all_recommendations),
         all_plots[0] if all_plots else None,
         '\n'.join(all_inference_times),
@@ -508,7 +386,7 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
         '\n'.join(all_data_points)
     )
 
-# Create an enhanced Gradio interface with Benjamin Graham's principles
+# Create an enhanced Gradio interface
 def create_interface():
     # Custom CSS for Teal branding
     custom_css = """
@@ -640,23 +518,23 @@ def create_interface():
     .gr-box {border-radius: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);}
     """
     
-    with gr.Blocks(title="AMD Instinct ROCm-Powered Financial Analysis Demo", theme=gr.themes.Soft(), css=custom_css) as interface:
+    with gr.Blocks(title="AMD Instinct MI3xx ROCm-Powered Financial Analysis Demo", theme=gr.themes.Soft(), css=custom_css) as interface:
         # Header with AMD logo in top right corner
         gr.HTML("""
             <div style="position: relative; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 10px; margin-bottom: 20px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg" alt="AMD Logo" style="position: absolute; top: 15px; right: 20px; height: 35px; width: auto;" />
                 <div style="padding-right: 120px;">
-                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct Financial Analysis Demo</h1>
-                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform</h3>
+                    <h1 style="margin: 0; color: #2c3e50; font-size: 2.2em; font-weight: 700; font-family: Arial, sans-serif;"> AMD Instinct ROCm-Powered Financial Analysis Demo</h1>
+                    <h3 style="margin: 5px 0 0 0; color: #00C2DE; font-size: 1.2em; font-weight: 600; font-family: Arial, sans-serif;">Powered by ROCm Platform </h3>
                 </div>
             </div>
         """)
         
         gr.Markdown("""
-            **Advanced AI-Driven Stock Analysis Demo on AMD Hardware**
+            **Advanced AI-Driven Stock Analysis on AMD Hardware**
             
             This cutting-edge financial analysis tool leverages AMD's Instinct GPU architecture with ROCm platform 
-            to deliver high-performance AI-driven stock analysis.
+            to deliver high-performance AI-driven stock analysis with modern GPU acceleration.
 
             ### Key Features:
             - **AMD Instinct Architecture**: High HBM3 memory for complex financial modeling
@@ -664,7 +542,6 @@ def create_interface():
             - **Real-time Processing**: GPU-accelerated technical indicators and market data
             - **Multi-Stock Portfolio Analysis**: Parallel processing capabilities
 
-            *"The intelligent investor is a realist who sells to optimists and buys from pessimists."* - Benjamin Graham
         """)
         
         with gr.Row():
@@ -681,42 +558,30 @@ def create_interface():
                 gr.Markdown("#### 📅 Date Selection")
                 with gr.Row():
                     with gr.Column():
-                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>")
-                        start_date_input = gr.HTML(
-                            value=f"""
-                            <div style="margin-bottom: 10px;">
-                                <input type="date" id="start_date_calendar" 
-                                       value="2024-08-13"
-                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
-                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
-                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                                       onchange="updateStartDate(this.value)">
-                            </div>
-                            <input type="hidden" id="start_date_value" value="2024-08-13">
-                            """,
-                            elem_id="start_date_container"
-                        )
-                    
+                        start_date_calendar = gr.HTML("""
+                        <label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>
+                        <input type="date" id="start_date_calendar" 
+                            value="2024-08-13"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb;
+                                    font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+                            onchange="updateStartDate(this.value)">
+                        """)
+
                     with gr.Column():
-                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>")
-                        end_date_input = gr.HTML(
-                            value=f"""
-                            <div style="margin-bottom: 10px;">
-                                <input type="date" id="end_date_calendar" 
-                                       value="2025-08-13"
-                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
-                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
-                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                                       onchange="updateEndDate(this.value)">
-                            </div>
-                            <input type="hidden" id="end_date_value" value="2025-08-13">
-                            """,
-                            elem_id="end_date_container"
-                        )
-                
-                # Hidden textboxes to capture the date values for the function
-                start_date_hidden = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
-                end_date_hidden = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
+                        end_date_calendar = gr.HTML("""
+                        <label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>
+                        <input type="date" id="end_date_calendar"
+                            value="2025-08-13"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb;
+                                    font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+                            onchange="updateEndDate(this.value)">
+                        """)
+
+                # Hidden inputs to store the actual date values for Gradio
+                start_date_input = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
+                end_date_input = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
                 
                 investor_type_input = gr.Dropdown(
                     choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
@@ -735,13 +600,6 @@ def create_interface():
                         ai_analysis_output = gr.Textbox(
                             label="AI Technical & Market Analysis", 
                             lines=15,
-                            interactive=False
-                        )
-                    
-                    with gr.TabItem("💎 Benjamin Graham Analysis"):
-                        graham_analysis_output = gr.Textbox(
-                            label="Benjamin Graham Value Analysis", 
-                            lines=10,
                             interactive=False
                         )
                     
@@ -768,22 +626,85 @@ def create_interface():
         gr.HTML("""
         <script>
         function updateStartDate(value) {
-            const hiddenInput = document.getElementById('start_date_hidden');
-            if (hiddenInput) {
-                hiddenInput.value = value;
-                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('Updating start date to:', value);
+            // Find the hidden Gradio textbox by searching through elements
+            const findAndUpdateInput = () => {
+                // Try multiple methods to find the hidden input
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    const container = input.closest('.gr-textbox');
+                    if (container && container.style.display === 'none') {
+                        // Check if this is likely our start date input by checking current value
+                        if (input.value === '2024-08-13' || input.value.includes('2024-08')) {
+                            console.log('Found start date input, updating...');
+                            input.value = value;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            
+            // Try immediately and with delays to handle dynamic loading
+            if (!findAndUpdateInput()) {
+                setTimeout(findAndUpdateInput, 100);
+                setTimeout(findAndUpdateInput, 500);
             }
         }
         
         function updateEndDate(value) {
-            const hiddenInput = document.getElementById('end_date_hidden');
-            if (hiddenInput) {
-                hiddenInput.value = value;
-                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('Updating end date to:', value);
+            // Find the hidden Gradio textbox by searching through elements
+            const findAndUpdateInput = () => {
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    const container = input.closest('.gr-textbox');
+                    if (container && container.style.display === 'none') {
+                        // Check if this is likely our end date input by checking current value
+                        if (input.value === '2025-08-13' || input.value.includes('2025-08')) {
+                            console.log('Found end date input, updating...');
+                            input.value = value;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            
+            // Try immediately and with delays to handle dynamic loading
+            if (!findAndUpdateInput()) {
+                setTimeout(findAndUpdateInput, 100);
+                setTimeout(findAndUpdateInput, 500);
             }
         }
         
-        // Simple approach to ensure tabs are visible
+        // Initialize calendar sync on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up periodic sync to ensure calendar and hidden inputs stay synchronized
+            setInterval(() => {
+                const startCalendar = document.getElementById('start_date_calendar');
+                const endCalendar = document.getElementById('end_date_calendar');
+                
+                if (startCalendar && endCalendar) {
+                    // Check if hidden inputs exist and sync their values
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    inputs.forEach(input => {
+                        const container = input.closest('.gr-textbox');
+                        if (container && container.style.display === 'none') {
+                            if (input.value.includes('2024') && startCalendar.value !== input.value) {
+                                startCalendar.value = input.value;
+                            } else if (input.value.includes('2025') && endCalendar.value !== input.value) {
+                                endCalendar.value = input.value;
+                            }
+                        }
+                    });
+                }
+            }, 1000);
+        });
         function ensureTabsVisible() {
             // Find all tab containers
             const tabContainers = document.querySelectorAll('.gradio-tabs');
@@ -896,10 +817,9 @@ def create_interface():
         # Event handlers
         analyze_btn.click(
             fn=gradio_interface,
-            inputs=[symbols_input, start_date_hidden, end_date_hidden, investor_type_input],
+            inputs=[symbols_input, start_date_input, end_date_input, investor_type_input],
             outputs=[
                 ai_analysis_output,
-                graham_analysis_output,
                 recommendations_output,
                 chart_output,
                 inference_time_output,
