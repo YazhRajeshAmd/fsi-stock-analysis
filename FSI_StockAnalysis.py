@@ -558,20 +558,30 @@ def create_interface():
                 gr.Markdown("#### 📅 Date Selection")
                 with gr.Row():
                     with gr.Column():
-                        start_date_input = gr.Textbox(
-                            label="Start Date (YYYY-MM-DD)",
-                            value="2024-08-13",
-                            placeholder="2024-01-01",
-                            info="Enter start date in YYYY-MM-DD format"
-                        )
+                        start_date_calendar = gr.HTML("""
+                        <label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>
+                        <input type="date" id="start_date_calendar" 
+                            value="2024-08-13"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb;
+                                    font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+                            onchange="updateStartDate(this.value)">
+                        """)
 
                     with gr.Column():
-                        end_date_input = gr.Textbox(
-                            label="End Date (YYYY-MM-DD)",
-                            value="2025-08-13",
-                            placeholder="2025-01-01",
-                            info="Enter end date in YYYY-MM-DD format"
-                        )
+                        end_date_calendar = gr.HTML("""
+                        <label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>
+                        <input type="date" id="end_date_calendar"
+                            value="2025-08-13"
+                            style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb;
+                                    font-size: 16px; width: 100%; background: white; cursor: pointer;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+                            onchange="updateEndDate(this.value)">
+                        """)
+
+                # Hidden inputs to store the actual date values for Gradio
+                start_date_input = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
+                end_date_input = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
                 
                 investor_type_input = gr.Dropdown(
                     choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
@@ -612,9 +622,89 @@ def create_interface():
                     token_count_output = gr.Textbox(label="Token Count", interactive=False, scale=1)
                     data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False, scale=1)
         
-        # Add JavaScript for horizontal tabs
+        # Add JavaScript for calendar functionality and horizontal tabs
         gr.HTML("""
         <script>
+        function updateStartDate(value) {
+            console.log('Updating start date to:', value);
+            // Find the hidden Gradio textbox by searching through elements
+            const findAndUpdateInput = () => {
+                // Try multiple methods to find the hidden input
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    const container = input.closest('.gr-textbox');
+                    if (container && container.style.display === 'none') {
+                        // Check if this is likely our start date input by checking current value
+                        if (input.value === '2024-08-13' || input.value.includes('2024-08')) {
+                            console.log('Found start date input, updating...');
+                            input.value = value;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            
+            // Try immediately and with delays to handle dynamic loading
+            if (!findAndUpdateInput()) {
+                setTimeout(findAndUpdateInput, 100);
+                setTimeout(findAndUpdateInput, 500);
+            }
+        }
+        
+        function updateEndDate(value) {
+            console.log('Updating end date to:', value);
+            // Find the hidden Gradio textbox by searching through elements
+            const findAndUpdateInput = () => {
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    const container = input.closest('.gr-textbox');
+                    if (container && container.style.display === 'none') {
+                        // Check if this is likely our end date input by checking current value
+                        if (input.value === '2025-08-13' || input.value.includes('2025-08')) {
+                            console.log('Found end date input, updating...');
+                            input.value = value;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            
+            // Try immediately and with delays to handle dynamic loading
+            if (!findAndUpdateInput()) {
+                setTimeout(findAndUpdateInput, 100);
+                setTimeout(findAndUpdateInput, 500);
+            }
+        }
+        
+        // Initialize calendar sync on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up periodic sync to ensure calendar and hidden inputs stay synchronized
+            setInterval(() => {
+                const startCalendar = document.getElementById('start_date_calendar');
+                const endCalendar = document.getElementById('end_date_calendar');
+                
+                if (startCalendar && endCalendar) {
+                    // Check if hidden inputs exist and sync their values
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    inputs.forEach(input => {
+                        const container = input.closest('.gr-textbox');
+                        if (container && container.style.display === 'none') {
+                            if (input.value.includes('2024') && startCalendar.value !== input.value) {
+                                startCalendar.value = input.value;
+                            } else if (input.value.includes('2025') && endCalendar.value !== input.value) {
+                                endCalendar.value = input.value;
+                            }
+                        }
+                    });
+                }
+            }, 1000);
+        });
         function ensureTabsVisible() {
             // Find all tab containers
             const tabContainers = document.querySelectorAll('.gradio-tabs');
