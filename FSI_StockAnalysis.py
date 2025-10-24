@@ -371,6 +371,11 @@ def gradio_interface(symbols, start_date, end_date, investor_type):
         all_inference_times.append(f"[{symbol}] LLM Inference Time: {pm.get('inference_time', 'N/A')}")
         all_token_counts.append(f"[{symbol}] Token Count: {pm.get('token_count', 'N/A')}")
         all_data_points.append(f"[{symbol}] Data Points: {pm.get('data_points', 'N/A')}")
+    print(f"\n🕒 User-selected date range:")
+    print(f"   Start Date: {start_date}")
+    print(f"   End Date:   {end_date}")
+    print(f"   Investor Type: {investor_type}")
+    print(f"   Symbols: {symbols}\n")
     # For plots, only show the first one if multiple
     return (
         '\n\n'.join(all_analyses),
@@ -553,42 +558,20 @@ def create_interface():
                 gr.Markdown("#### 📅 Date Selection")
                 with gr.Row():
                     with gr.Column():
-                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>Start Date</label>")
-                        start_date_input = gr.HTML(
-                            value=f"""
-                            <div style="margin-bottom: 10px;">
-                                <input type="date" id="start_date_calendar" 
-                                       value="2024-08-13"
-                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
-                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
-                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                                       onchange="updateStartDate(this.value)">
-                            </div>
-                            <input type="hidden" id="start_date_value" value="2024-08-13">
-                            """,
-                            elem_id="start_date_container"
+                        start_date_input = gr.Textbox(
+                            label="Start Date (YYYY-MM-DD)",
+                            value="2024-08-13",
+                            placeholder="2024-01-01",
+                            info="Enter start date in YYYY-MM-DD format"
                         )
-                    
+
                     with gr.Column():
-                        gr.HTML("<label style='font-weight: 600; margin-bottom: 8px; display: block;'>End Date</label>")
-                        end_date_input = gr.HTML(
-                            value=f"""
-                            <div style="margin-bottom: 10px;">
-                                <input type="date" id="end_date_calendar" 
-                                       value="2025-08-13"
-                                       style="padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; 
-                                              font-size: 16px; width: 100%; background: white; cursor: pointer;
-                                              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                                       onchange="updateEndDate(this.value)">
-                            </div>
-                            <input type="hidden" id="end_date_value" value="2025-08-13">
-                            """,
-                            elem_id="end_date_container"
+                        end_date_input = gr.Textbox(
+                            label="End Date (YYYY-MM-DD)",
+                            value="2025-08-13",
+                            placeholder="2025-01-01",
+                            info="Enter end date in YYYY-MM-DD format"
                         )
-                
-                # Hidden textboxes to capture the date values for the function
-                start_date_hidden = gr.Textbox(value="2024-08-13", visible=False, elem_id="start_date_hidden")
-                end_date_hidden = gr.Textbox(value="2025-08-13", visible=False, elem_id="end_date_hidden")
                 
                 investor_type_input = gr.Dropdown(
                     choices=["Conservative", "Moderate", "Aggressive", "Day Trader"],
@@ -629,26 +612,9 @@ def create_interface():
                     token_count_output = gr.Textbox(label="Token Count", interactive=False, scale=1)
                     data_points_output = gr.Textbox(label="Data Points Analyzed", interactive=False, scale=1)
         
-        # Add JavaScript for calendar functionality and horizontal tabs
+        # Add JavaScript for horizontal tabs
         gr.HTML("""
         <script>
-        function updateStartDate(value) {
-            const hiddenInput = document.getElementById('start_date_hidden');
-            if (hiddenInput) {
-                hiddenInput.value = value;
-                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }
-        
-        function updateEndDate(value) {
-            const hiddenInput = document.getElementById('end_date_hidden');
-            if (hiddenInput) {
-                hiddenInput.value = value;
-                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }
-        
-        // Simple approach to ensure tabs are visible
         function ensureTabsVisible() {
             // Find all tab containers
             const tabContainers = document.querySelectorAll('.gradio-tabs');
@@ -761,7 +727,7 @@ def create_interface():
         # Event handlers
         analyze_btn.click(
             fn=gradio_interface,
-            inputs=[symbols_input, start_date_hidden, end_date_hidden, investor_type_input],
+            inputs=[symbols_input, start_date_input, end_date_input, investor_type_input],
             outputs=[
                 ai_analysis_output,
                 recommendations_output,
