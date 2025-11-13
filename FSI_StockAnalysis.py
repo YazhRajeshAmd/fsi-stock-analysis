@@ -11,7 +11,7 @@ import time
 import requests
 
 # Initialize Ollama with Llama3.1 - increased temperature for more varied responses
-llm = Ollama(model="llama3.1:70b", temperature=0.3)
+llm = Ollama(model="llama3.1:8b", temperature=0.3)
 
 # Updated prompt template focused on comprehensive AI analysis
 stock_analysis_prompt = PromptTemplate(
