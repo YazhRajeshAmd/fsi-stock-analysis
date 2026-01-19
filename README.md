@@ -65,7 +65,7 @@ A sophisticated financial analysis tool that combines real-time stock data, tech
 
 ## Docker Compose (docker-compose.yml)
 
-##Services:
+## Services:
 
 1. vllm-phi4: ROCm vLLM service running Microsoft Phi-4 model
 
