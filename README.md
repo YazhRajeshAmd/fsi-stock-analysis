@@ -63,6 +63,60 @@ A sophisticated financial analysis tool that combines real-time stock data, tech
 
 5. Open your browser and navigate to the provided Gradio URL (typically `http://127.0.0.1:7860`)
 
+## Docker Compose (docker-compose.yml)
+
+##Services:
+
+1. vllm-phi4: ROCm vLLM service running Microsoft Phi-4 model
+
+2. fsi-analysis: Your financial analysis application
+
+## Features:
+
+GPU resource allocation with health checks
+Persistent HuggingFace model cache
+Service dependencies and networking
+Automatic restarts and port mapping
+
+## Usage:
+
+ ```bash
+cd /root/fsi-stock-analysis
+docker-compose up -d
+```
+
+## Kubernetes Deployment (kubernetes-deployment.yaml)
+
+## Components:
+
+1. Namespace: amd-fsi-analysis for isolation
+2. vLLM Deployment: GPU-enabled Phi-4 model serving
+3. FSI App Deployment: Multi-replica financial analysis frontend
+4. Services: ClusterIP for vLLM, LoadBalancer for external access
+5. PVC: 50GB storage for HuggingFace model cache
+6. Ingress: HTTPS with Let's Encrypt SSL
+7. HPA: Auto-scaling based on CPU/memory usage
+
+## Enterprise Features:
+
+1. GPU Scheduling: Node selectors and tolerations
+2. Health Checks: Liveness and readiness probes
+3. Resource Limits: CPU/memory/GPU quotas
+4. Auto-scaling: 2-10 replicas based on load
+5. SSL Termination: Production-ready HTTPS
+
+## Configuration Updates:
+
+Added environment variable support (os.getenv) for containerized deployments
+API base and model name now configurable via environment
+
+## Deployment:
+
+```bash
+kubectl apply -f kubernetes-deployment.yaml
+The setup provides both local development (Docker Compose) and production deployment (Kubernetes) options for your AMD-powered financial analysis application!
+```
+
 ## 📊 Usage
 
 1. **Enter Stock Symbol**: Input any valid stock ticker (e.g., AAPL, GOOGL, TSLA)
