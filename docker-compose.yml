@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  vllm-phi4:
+    image: rocm/vllm-dev:nightly
+    container_name: fsi-vllm-phi4
+    command: >
+      python -m vllm.entrypoints.openai.api_server
+      --model microsoft/Phi-4
+      --host 0.0.0.0
+      --port 8000
+      --tensor-parallel-size 1
+      --max-model-len 16384
+      --gpu-memory-utilization 0.8
+      --trust-remote-code
+      --disable-log-requests
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  fsi-analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fsi-stock-analysis
+    depends_on:
+      vllm-phi4:
+        condition: service_healthy
+    ports:
+      - "7860:7860"
+    environment:
+      - VLLM_API_BASE=http://vllm-phi4:8000/v1
+      - MODEL_NAME=microsoft/Phi-4
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python FSI_StockAnalysis_vLLM.py
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge
