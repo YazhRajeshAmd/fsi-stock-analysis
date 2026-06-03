@@ -756,4 +756,8 @@ def create_interface():
 iface = create_interface()
 
 if __name__ == "__main__":
-    iface.launch(server_name="0.0.0.0")
+    iface.launch(
+        server_name="0.0.0.0",
+        strict_cors=False,
+        footer_links=[],
+    )

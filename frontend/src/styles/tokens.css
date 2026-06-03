@@ -1,0 +1,89 @@
+/* AMD Brand Design Tokens — v1.0 2024 */
+/* Colors informed by DCGPU Hub design system */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+:root {
+  /* ── Colors ── */
+  --amd-bg:         #131416;  /* DCGPU hub base — warm dark charcoal */
+  --amd-bg-card:    #1d1f21;  /* card surfaces */
+  --amd-bg-input:   #27272a;  /* input backgrounds */
+  --amd-black:      #0d0e0f;  /* deepest shade */
+  --amd-white:      #eaebec;  /* off-white — easier on eyes */
+  --amd-white-pure: #FFFFFF;
+  --amd-teal:       #00C2DE;  /* Instinct / data center accent */
+  --amd-teal-dark:  #00788E;  /* hover states, depth */
+  --amd-gold:       #C1A968;  /* brand-level highlight */
+  --amd-border:     #222426;  /* subtle borders */
+  --amd-border-mid: #656b72;  /* visible borders */
+  --amd-muted:      #b4b9bc;  /* muted text */
+
+  /* ── Typography ── */
+  --font-primary:  'DM Sans', system-ui, sans-serif;
+  --font-weight-light:   300;
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+  --font-weight-bold:    700;
+
+  /* ── Type scale ── */
+  --text-headline: 2.25rem;
+  --text-sub:      1.125rem;
+  --text-title:    1rem;
+  --text-body:     0.875rem;
+  --text-small:    0.75rem;
+
+  /* ── Spacing ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+  --space-2xl: 64px;
+
+  /* ── Border radius ── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-teal: 0 0 20px rgba(0, 194, 222, 0.2);
+}
+
+/* ── Global reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: var(--amd-bg);
+  color: var(--amd-white);
+  font-family: var(--font-primary);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle radial glow behind the header area */
+#root::before {
+  content: '';
+  position: fixed;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 300px;
+  background: radial-gradient(ellipse at center, rgba(0, 194, 222, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+a {
+  color: var(--amd-teal);
+  text-decoration: none;
+}

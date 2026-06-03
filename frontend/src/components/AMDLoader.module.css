@@ -1,0 +1,41 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  min-height: 320px;
+}
+
+.iconWrap {
+  width: 90px;
+  height: 54px;
+}
+
+.arrow {
+  width: 100%;
+  height: 100%;
+}
+
+.label {
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--amd-muted);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.dots {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--amd-teal);
+}
