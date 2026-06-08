@@ -9,6 +9,7 @@ function ArrowMark({ className }) {
       viewBox="0 0 120 72"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <defs>
         {/* Clip to arrow shapes so shimmer is masked to them */}
@@ -55,7 +56,7 @@ function ArrowMark({ className }) {
 
 export default function AMDLoader({ label = 'Analyzing with AMD MI300X...' }) {
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} role="status" aria-live="polite" aria-label={label}>
       {/* Arrowmark with built-in shimmer */}
       <div className={styles.iconWrap}>
         <ArrowMark className={styles.arrow} />

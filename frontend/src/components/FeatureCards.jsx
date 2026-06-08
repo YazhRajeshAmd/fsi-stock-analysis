@@ -156,10 +156,13 @@ export default function FeatureCards() {
             className={`${styles.card} ${active === f.title ? styles.cardActive : ''}`}
             variants={cardVariants}
             onClick={() => setActive((prev) => (prev === f.title ? null : f.title))}
+            role="button"
+            aria-expanded={active === f.title}
+            aria-label={`${f.title} — ${f.eyebrow}. Click to ${active === f.title ? 'close' : 'learn more'}`}
           >
             <div className={styles.header}>
-              <span className={styles.accent} />
-              <span className={styles.icon}>{f.icon}</span>
+              <span className={styles.accent} aria-hidden="true" />
+              <span className={styles.icon} aria-hidden="true">{f.icon}</span>
             </div>
             <h3 className={styles.title}>{f.title}</h3>
             <p className={styles.description}>{f.description}</p>

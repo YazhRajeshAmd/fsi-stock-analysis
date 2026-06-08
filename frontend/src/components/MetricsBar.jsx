@@ -19,11 +19,12 @@ function MetricCard({ label, rawValue, unit, decimals, delay }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut', delay }}
+      aria-label={num != null ? `${label}: ${count}${unit}` : `${label}: not available`}
     >
-      <span className={styles.value}>
+      <span className={styles.value} aria-hidden="true">
         {num != null ? `${count}${unit}` : '—'}
       </span>
-      <span className={styles.label}>{label}</span>
+      <span className={styles.label} aria-hidden="true">{label}</span>
     </motion.div>
   )
 }

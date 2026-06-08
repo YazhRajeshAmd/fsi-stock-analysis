@@ -50,11 +50,15 @@ export default function ResultsPanel({ results, loading, error }) {
       transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
     >
       {/* Tab bar */}
-      <div className={styles.tabBar}>
+      <div className={styles.tabBar} role="tablist" aria-label="Analysis results">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
+            id={`tab-${tab.id}`}
             className={[styles.tab, activeTab === tab.id ? styles.tabActive : ''].join(' ')}
             onClick={() => setActiveTab(tab.id)}
           >
@@ -86,6 +90,9 @@ export default function ResultsPanel({ results, loading, error }) {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className={styles.tabContent}
+              role="tabpanel"
+              id={`panel-${activeTab}`}
+              aria-labelledby={`tab-${activeTab}`}
             >
               {activeTab === 'analysis' && (
                 <TextOutput text={results?.aiAnalysis} />

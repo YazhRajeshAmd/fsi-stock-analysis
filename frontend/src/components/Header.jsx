@@ -18,9 +18,9 @@ export default function Header() {
 
           {/* Left — AMD + separator + ROCm logo */}
           <div className={styles.logoLockup}>
-            <img src={AMD_LOGO}  alt="AMD"  className={styles.amdLogo}  />
-            <span className={styles.logoSeparator} />
-            <img src={ROCM_LOGO} alt="ROCm" className={styles.rocmLogo} />
+            <img src={AMD_LOGO}  alt="AMD — Advanced Micro Devices"  className={styles.amdLogo}  />
+            <span className={styles.logoSeparator} aria-hidden="true" />
+            <img src={ROCM_LOGO} alt="ROCm open-source GPU compute platform" className={styles.rocmLogo} />
           </div>
 
           {/* Centre — nav labels */}

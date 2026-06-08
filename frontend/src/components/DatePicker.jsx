@@ -105,6 +105,9 @@ export default function DatePicker({ value, onChange, placeholder = 'Select date
         type="button"
         className={styles.trigger}
         onClick={() => setOpen(o => !o)}
+        aria-label={value ? `Selected date: ${formatDisplay(value)}. Click to change` : placeholder}
+        aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -116,7 +119,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Select date
       </button>
 
       {open && (
-        <div className={styles.popover}>
+        <div className={styles.popover} role="dialog" aria-label="Date picker" aria-modal="true">
           <div className={styles.header}>
             <button type="button" className={styles.navBtn} onClick={prevMonth} aria-label="Previous month">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -133,11 +136,11 @@ export default function DatePicker({ value, onChange, placeholder = 'Select date
             </button>
           </div>
 
-          <div className={styles.weekRow}>
-            {DAYS.map(d => <span key={d} className={styles.weekDay}>{d}</span>)}
+          <div className={styles.weekRow} role="row">
+            {DAYS.map(d => <span key={d} className={styles.weekDay} aria-label={d}>{d}</span>)}
           </div>
 
-          <div className={styles.grid}>
+          <div className={styles.grid} role="grid" aria-label={monthLabel}>
             {buildGrid().map(({ iso, day, other }) => {
               const isSelected = iso === value
               const isToday = iso === today
@@ -145,6 +148,10 @@ export default function DatePicker({ value, onChange, placeholder = 'Select date
                 <button
                   key={iso}
                   type="button"
+                  role="gridcell"
+                  aria-label={`${formatDisplay(iso)}${isToday ? ', today' : ''}${isSelected ? ', selected' : ''}`}
+                  aria-selected={isSelected}
+                  aria-disabled={other}
                   className={[
                     styles.cell,
                     other     ? styles.cellOther    : '',
