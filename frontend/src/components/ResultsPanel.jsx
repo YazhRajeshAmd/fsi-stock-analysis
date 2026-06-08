@@ -44,6 +44,7 @@ export default function ResultsPanel({ results, loading, error }) {
   return (
     <motion.div
       className={styles.panel}
+      data-tour="results"
       initial={{ opacity: 0, x: 32 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}

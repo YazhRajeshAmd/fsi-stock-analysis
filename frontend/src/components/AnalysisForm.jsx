@@ -29,6 +29,7 @@ export default function AnalysisForm({ values, onChange, onSubmit, onPreview, lo
   return (
     <motion.div
       className={styles.panel}
+      data-tour="form"
       initial={{ opacity: 0, x: -32 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
@@ -114,6 +115,7 @@ export default function AnalysisForm({ values, onChange, onSubmit, onPreview, lo
 
       <motion.button
         className={styles.btn}
+        data-tour="submit"
         onClick={onSubmit}
         disabled={loading}
         whileHover={{ scale: 1.02 }}

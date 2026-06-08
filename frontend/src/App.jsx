@@ -7,7 +7,7 @@ import ResultsPanel from './components/ResultsPanel'
 import { fetchChartData } from './lib/fetchChartData'
 import { SAMPLE_RESULTS } from './lib/sampleData'
 import Footer from './components/Footer'
-import ParticleWave from './components/ParticleWave'
+import OnboardingTour from './components/OnboardingTour'
 
 const DEFAULT_FORM = {
   symbols: '',
@@ -68,7 +68,8 @@ export default function App() {
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      <OnboardingTour />
       <Header />
 
       <div style={{
@@ -91,11 +92,8 @@ export default function App() {
         <ResultsPanel results={results} loading={loading} error={error} />
       </div>
 
-      <div style={{ position: 'relative', minHeight: '280px' }}>
-        <ParticleWave />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <FeatureCards />
-        </div>
+      <div style={{ marginTop: 'var(--space-xl)' }}>
+        <FeatureCards />
       </div>
       <Footer />
     </div>
