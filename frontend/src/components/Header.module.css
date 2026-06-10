@@ -1,10 +1,3 @@
-/* registers --border-angle as an animatable CSS property */
-@property --border-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
 /* wrapper — centres the pill on the page */
 .wrapper {
   width: 100%;
@@ -15,29 +8,20 @@
   z-index: 100;
 }
 
-/* glow ring — sits behind the pill, rotates the neon border */
+/* subtle glow pulse — animates box-shadow only, no conic gradient */
 .pillGlow {
   position: relative;
   width: 100%;
   max-width: 1100px;
   border-radius: 999px;
   padding: 1.5px;
-  background: conic-gradient(
-    from var(--border-angle),
-    transparent       0%,
-    transparent      30%,
-    var(--amd-teal)  45%,
-    var(--amd-gold)  55%,
-    transparent      70%,
-    transparent     100%
-  );
-  animation: borderSpin 4s linear infinite;
-  /* outer glow that follows the spinning light */
-  box-shadow: 0 0 18px rgba(0, 194, 222, 0.2), 0 0 40px rgba(0, 194, 222, 0.08);
+  background: var(--amd-teal);
+  animation: glowPulse 3s ease-in-out infinite;
 }
 
-@keyframes borderSpin {
-  to { --border-angle: 360deg; }
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 194, 222, 0.15), 0 0 24px rgba(0, 194, 222, 0.06); }
+  50%       { box-shadow: 0 0 20px rgba(0, 194, 222, 0.35), 0 0 48px rgba(0, 194, 222, 0.14); }
 }
 
 /* the pill itself */
