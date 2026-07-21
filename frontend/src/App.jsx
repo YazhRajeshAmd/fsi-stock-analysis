@@ -34,11 +34,11 @@ export default function App() {
 
     try {
       const client = await Client.connect('http://localhost:7860')
-      const response = await client.predict('/predict', {
-        symbols_input:       form.symbols,
-        start_date_input:    form.startDate,
-        end_date_input:      form.endDate,
-        investor_type_input: form.investorType,
+      const response = await client.predict('/gradio_interface', {
+        symbols:       form.symbols,
+        start_date:    form.startDate,
+        end_date:      form.endDate,
+        investor_type: form.investorType,
       })
 
       // outputs: [ai_analysis, recommendations, chart, inference_time, token_count, data_points]
