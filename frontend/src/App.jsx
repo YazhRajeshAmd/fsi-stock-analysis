@@ -5,7 +5,6 @@ import FeatureCards from './components/FeatureCards'
 import AnalysisForm from './components/AnalysisForm'
 import ResultsPanel from './components/ResultsPanel'
 import { fetchChartData } from './lib/fetchChartData'
-import { SAMPLE_RESULTS } from './lib/sampleData'
 import Footer from './components/Footer'
 import OnboardingTour from './components/OnboardingTour'
 
@@ -85,7 +84,7 @@ export default function App() {
           values={form}
           onChange={handleChange}
           onSubmit={handleSubmit}
-          onPreview={() => setResults(SAMPLE_RESULTS)}
+
           loading={loading}
         />
 

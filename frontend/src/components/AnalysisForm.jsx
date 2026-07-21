@@ -13,7 +13,7 @@ const STEPS = [
   'Review results across different analysis perspectives',
 ]
 
-export default function AnalysisForm({ values, onChange, onSubmit, onPreview, loading }) {
+export default function AnalysisForm({ values, onChange, onSubmit, loading }) {
   const [helpOpen, setHelpOpen] = useState(false)
   const helpRef = useRef(null)
 
@@ -124,10 +124,6 @@ export default function AnalysisForm({ values, onChange, onSubmit, onPreview, lo
       >
         {loading ? 'Analyzing...' : 'Analyze Stocks'}
       </motion.button>
-
-      <button type="button" className={styles.previewBtn} onClick={onPreview}>
-        Load sample data
-      </button>
 
       <p className={styles.disclaimer}>
         For educational purposes only. Not financial advice.
