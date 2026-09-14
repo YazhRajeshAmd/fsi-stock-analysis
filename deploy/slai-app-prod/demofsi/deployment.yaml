@@ -1,0 +1,81 @@
+# Image is stamped automatically by .github/workflows/deploy-prod.yml after
+# Harbor publish + authorization — no manual edit needed for a normal run.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demofsi
+  namespace: slai-app-prod
+  labels:
+    app.kubernetes.io/name: demofsi
+    app.kubernetes.io/instance: demofsi
+    app.kubernetes.io/managed-by: slai-app-platform
+    hosted-by: slai-app-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demofsi
+      app.kubernetes.io/instance: demofsi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demofsi
+        app.kubernetes.io/instance: demofsi
+        hosted-by: slai-app-platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: mkmhub.amd.com/hw-slaiapp-dev/demofsi:1495fc0bafed1c42ea8da1106c6c693948b43adf
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 7860
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://atlvslaiapp03:4317"
+            - name: OTEL_SERVICE_NAME
+              value: demofsi
+          envFrom:
+            - secretRef:
+                name: demofsi-app-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi

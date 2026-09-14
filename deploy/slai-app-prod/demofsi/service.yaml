@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demofsi
+  namespace: slai-app-prod
+  labels:
+    app.kubernetes.io/name: demofsi
+    app.kubernetes.io/instance: demofsi
+    app.kubernetes.io/managed-by: slai-app-platform
+    hosted-by: slai-app-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: demofsi
+    app.kubernetes.io/instance: demofsi
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

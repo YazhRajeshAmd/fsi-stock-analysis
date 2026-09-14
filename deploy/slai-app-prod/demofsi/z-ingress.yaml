@@ -1,0 +1,28 @@
+# Public URL: https://demofsi.slai-app.amd.com/
+# Uses the platform-owned wildcard TLS Secret — no per-app TLS ciphertext.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demofsi
+  namespace: slai-app-prod
+  labels:
+    app.kubernetes.io/name: demofsi
+    app.kubernetes.io/instance: demofsi
+    app.kubernetes.io/managed-by: slai-app-platform
+    hosted-by: slai-app-platform
+spec:
+  rules:
+    - host: demofsi.slai-app.amd.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demofsi
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - demofsi.slai-app.amd.com
+      secretName: slai-app-wildcard-tls

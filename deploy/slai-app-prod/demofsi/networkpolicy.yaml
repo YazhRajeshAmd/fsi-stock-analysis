@@ -1,0 +1,48 @@
+# Whitelist-only egress: DNS, OTLP :4317, HTTPS :443 (Yahoo Finance data),
+# plus the vLLM endpoint port. VLLM_API_BASE is currently a placeholder —
+# once the real ROCm vLLM host/port is known, tighten the egress rule below
+# (ipBlock and/or port) to match it instead of leaving all of 443 open.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: demofsi-net
+  namespace: slai-app-prod
+  labels:
+    app.kubernetes.io/name: demofsi
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: demofsi
+      app.kubernetes.io/instance: demofsi
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 7860
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 4317
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        # TODO: add the vLLM endpoint's real port here once known
+        # (e.g. 8000/8003), scoped to its ipBlock if it's on a fixed host.

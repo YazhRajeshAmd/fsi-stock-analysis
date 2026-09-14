@@ -1,3 +1,27 @@
+## SLAI app platform onboarding (demofsi)
+
+This repo is wired for `slai-app-platform` (`.github/workflows/deploy-prod.yml`
++ `deploy/slai-app-prod/demofsi/`). Two fixes were made to
+`FSI_StockAnalysis_vLLM.py` for this to work as a container:
+
+- `VLLM_API_BASE` and `MODEL_NAME` now read from env vars (were hardcoded to
+  `http://localhost:8003/v1`) — set via the `demofsi-app-secrets` Secret.
+  **Currently a placeholder** (`http://CHANGE-ME:8000/v1`) — update
+  `deploy/slai-app-prod/demofsi/secrets.enc.yaml` once a real ROCm vLLM
+  endpoint exists.
+- Gradio's `server_port` was hardcoded to `7861`, which didn't match the
+  Dockerfile's `EXPOSE 7860` — now reads `PORT` (default `7860`), and
+  `share=True`/`debug=True` are off (no public gradio.live tunnel in
+  production).
+
+To onboard: set up GitHub Actions secrets/variables on this repo per
+`skills/slai-app-creator/SKILL.md` §1c (`SLAI_APP_DEV_PR_TOKEN`,
+`HARBOR_USERNAME`, `HARBOR_PASSWORD`; variables `APP_ID=demofsi`,
+`IMAGE_NAME=demofsi`, `BUILD_CONTEXT=.`), then Actions → Deploy prod → Run
+workflow.
+
+---
+
 # Financial Stock Intelligence (FSI)
 
 🚀 **AI-Powered Stock Analysis with Technical Indicators and LLM Insights**

@@ -4,6 +4,7 @@ AMD Instinct MI3xx ROCm-Powered Financial Analysis Demo - vLLM Version
 Converted from Ollama to vLLM for enhanced performance on AMD GPU infrastructure
 """
 
+import os
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -18,9 +19,11 @@ from typing import List, Dict, Tuple, Optional, Union
 import warnings
 warnings.filterwarnings("ignore")
 
-# vLLM API Configuration
-VLLM_API_BASE = "http://localhost:8003/v1"  # Using LiteLLM proxy endpoint
-MODEL_NAME = "microsoft/phi-4"  # Your configured model
+# vLLM API Configuration — override via env var when deploying (e.g. platform
+# secret pointing at a real ROCm vLLM endpoint). Falls back to the original
+# local default for unchanged local/dev usage.
+VLLM_API_BASE = os.environ.get("VLLM_API_BASE", "http://localhost:8003/v1")
+MODEL_NAME = os.environ.get("MODEL_NAME", "microsoft/phi-4")
 MAX_TOKENS = 2048
 TEMPERATURE = 0.3
 
@@ -967,8 +970,8 @@ if __name__ == "__main__":
     
     iface = create_interface()
     iface.launch(
-        server_name="0.0.0.0", 
-        server_port=7861,
-        share=True,
-        debug=True
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("PORT", "7860")),
+        share=False,
+        debug=False
     )

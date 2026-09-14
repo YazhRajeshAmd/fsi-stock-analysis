@@ -1,0 +1,399 @@
+# TEMPLATE — copy to .github/workflows/deploy-prod.yml in your application repository.
+# Canonical: skills/slai-app-creator/assets/templates/deploy-prod.yml.example
+#
+# Manual trigger (workflow_dispatch):
+#   1) Checkout THIS app repo.
+#   2) Build Dockerfile (linux/amd64) and push an immutable staging tag to Harbor.
+#   3) Authorize its exact digest and generate image-policy.yaml/image-release.json.
+#   4) Clone slai-app-platform, copy manifests and records, stamp the digest, open PR.
+#
+# Handoff directory (committed in the app repo): deploy/slai-app-prod/<APP_ID>/ by default.
+# Copy: deployment.yaml (required), service.yaml (required), z-ingress.yaml (required, FQDN — SKILL.md §3),
+# secrets.enc.yaml (required), networkpolicy.yaml if present, and legacy tls-secret.enc.yaml if already present.
+# This resubmits manifest changes (not only image) when you edit handoff files.
+#
+# Only files that exist in handoff are copied — removing a file from handoff does not delete it on
+# slai-app-platform; use a manual PR if you must drop a manifest there.
+#
+# Commit application SOPS ciphertext at deploy/slai-app-prod/<APP_ID>/secrets.enc.yaml.
+#
+# Skill: SKILL.md §1c — PAT setup, Harbor secrets, Variables, first onboard vs redeploy.
+#
+# Required GitHub Actions SECRETS (on THIS application repo — Settings → Secrets and variables → Actions):
+#   HARBOR_USERNAME, HARBOR_PASSWORD  — approved CI Harbor push robot/service identity
+#   SLAI_APP_DEV_PR_TOKEN            — fine-grained PAT (see SKILL.md §1c); never log the value
+# Default Harbor location: mkmhub.amd.com/hw-slaiapp-dev. Leave Harbor overrides unset.
+#
+# Required GitHub Actions VARIABLES (on THIS application repo — Settings → Secrets and variables → Actions → Variables):
+#   APP_ID, IMAGE_NAME, BUILD_CONTEXT
+#
+# Optional VARIABLES:
+#   DOCKERFILE (default $BUILD_CONTEXT/Dockerfile), SLAI_APP_DEV_REPO (default AMD-SLAI/slai-app-platform),
+#   MANIFEST_HANDOFF_REL — path from repo root to handoff dir, default deploy/slai-app-prod/<APP_ID> resolved at runtime
+#
+# DEVELOPER-OWNED ALTERNATE HARBOR — no platform approval required:
+#   HARBOR_REGISTRY, HARBOR_PROJECT — alternate hostname/project; leave unset normally
+#   HARBOR_CREDENTIAL_LOCATION — Actions Secret equal to the selected hostname/project
+# If the cluster also needs pull auth, encrypt a different pull-only robot as the
+# dockerconfigjson document in secrets.enc.yaml; never pass it through this workflow.
+# The web-app developer owns reachability, credentials, rotation, and maintenance.
+#
+# Optional: set MANIFEST_HANDOFF_REL to e.g. deploy/slai-app-prod/my-app if your tree differs (still must contain YAMLs).
+#
+# Runner: must reach Harbor. Use ubuntu-latest if registry egress allows.
+
+name: Deploy prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      slai_base_ref:
+        description: "Base branch on slai-app-platform for the PR (main = prod URL, dev = dev URL)"
+        required: true
+        default: main
+        type: choice
+        options:
+          - main
+          - dev
+
+concurrency:
+  group: deploy-prod-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      app_id: ${{ steps.cfg.outputs.app_id }}
+      image_repository: ${{ steps.image.outputs.image_repository }}
+      image_tag: ${{ steps.image.outputs.image_tag }}
+      image_digest: ${{ steps.push.outputs.digest }}
+      full_image: ${{ steps.image.outputs.full_image }}
+      produce_eligible: ${{ steps.cfg.outputs.produce_eligible }}
+      slai_repo: ${{ steps.cfg.outputs.slai_repo }}
+      manifest_handoff_rel: ${{ steps.cfg.outputs.manifest_handoff_rel }}
+    steps:
+      - name: Checkout app repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for platform manifest validation
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned platform manifest validation dependencies
+        run: |
+          set -euo pipefail
+          PYTHON_DEPS="${RUNNER_TEMP}/slai-validation-deps"
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --no-input \
+            --target "${PYTHON_DEPS}" \
+            "jsonschema==3.2.0" \
+            "PyYAML==6.0.1"
+          echo "PYTHONPATH=${PYTHON_DEPS}" >> "${GITHUB_ENV}"
+          PYTHONPATH="${PYTHON_DEPS}" python3 -c 'import jsonschema, yaml'
+
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/bin"
+          curl -fsSL -o "$RUNNER_TEMP/yq" \
+            "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
+          install -m 0755 "$RUNNER_TEMP/yq" "${RUNNER_TEMP}/bin/yq"
+          echo "${RUNNER_TEMP}/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve configuration
+        id: cfg
+        env:
+          V_APP_ID: ${{ vars.APP_ID }}
+          V_IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+          V_BUILD_CONTEXT: ${{ vars.BUILD_CONTEXT }}
+          V_HARBOR_REGISTRY: ${{ vars.HARBOR_REGISTRY }}
+          V_HARBOR_PROJECT: ${{ vars.HARBOR_PROJECT }}
+          HARBOR_CREDENTIAL_LOCATION: ${{ secrets.HARBOR_CREDENTIAL_LOCATION }}
+          V_DOCKERFILE: ${{ vars.DOCKERFILE }}
+          V_SLAI_REPO: ${{ vars.SLAI_APP_DEV_REPO }}
+          V_MANIFEST_HANDOFF_REL: ${{ vars.MANIFEST_HANDOFF_REL }}
+        run: |
+          set -euo pipefail
+          APP_ID="${V_APP_ID}"
+          IMAGE_NAME="${V_IMAGE_NAME}"
+          BUILD_CONTEXT="${V_BUILD_CONTEXT}"
+          if [[ -z "${APP_ID}" || -z "${IMAGE_NAME}" || -z "${BUILD_CONTEXT}" ]]; then
+            echo "::error::Set repository Variables APP_ID, IMAGE_NAME, BUILD_CONTEXT (see workflow header)."
+            exit 1
+          fi
+          HARBOR_REGISTRY="${V_HARBOR_REGISTRY:-mkmhub.amd.com}"
+          HARBOR_PROJECT="${V_HARBOR_PROJECT:-hw-slaiapp-dev}"
+          if [[ ! "${HARBOR_REGISTRY}" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]{1,5})?$ ]]; then
+            echo "::error::HARBOR_REGISTRY must be a hostname with optional port, without a scheme or path."
+            exit 1
+          fi
+          if [[ ! "${HARBOR_PROJECT}" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+            echo "::error::HARBOR_PROJECT must be one lowercase Harbor project name."
+            exit 1
+          fi
+          if [[ ! "${IMAGE_NAME}" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+            echo "::error::IMAGE_NAME must be one lowercase Harbor repository segment."
+            exit 1
+          fi
+          SELECTED_LOCATION="${HARBOR_REGISTRY}/${HARBOR_PROJECT}"
+          BOUND_LOCATION="${HARBOR_CREDENTIAL_LOCATION:-mkmhub.amd.com/hw-slaiapp-dev}"
+          if [[ "${SELECTED_LOCATION}" != "${BOUND_LOCATION}" ]]; then
+            echo "::error::Selected Harbor location does not match the location bound to the configured push credentials."
+            exit 1
+          fi
+          DOCKERFILE="${V_DOCKERFILE:-${BUILD_CONTEXT}/Dockerfile}"
+          SLAI_REPO="${V_SLAI_REPO:-AMD-SLAI/slai-app-platform}"
+          HANDOFF_REL="${V_MANIFEST_HANDOFF_REL:-deploy/slai-app-prod/${APP_ID}}"
+          if [[ ! -f "${DOCKERFILE}" ]]; then
+            echo "::error::Dockerfile not found: ${DOCKERFILE}"
+            exit 1
+          fi
+          echo "app_id=${APP_ID}" >> "$GITHUB_OUTPUT"
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "build_context=${BUILD_CONTEXT}" >> "$GITHUB_OUTPUT"
+          echo "harbor_registry=${HARBOR_REGISTRY}" >> "$GITHUB_OUTPUT"
+          echo "harbor_project=${HARBOR_PROJECT}" >> "$GITHUB_OUTPUT"
+          echo "dockerfile=${DOCKERFILE}" >> "$GITHUB_OUTPUT"
+          echo "slai_repo=${SLAI_REPO}" >> "$GITHUB_OUTPUT"
+          echo "manifest_handoff_rel=${HANDOFF_REL}" >> "$GITHUB_OUTPUT"
+          if [[ "${HARBOR_REGISTRY}/${HARBOR_PROJECT}" == "mkmhub.amd.com/hw-slaiapp-dev" && "${IMAGE_NAME}" == "${APP_ID}" ]]; then
+            echo "produce_eligible=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "produce_eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::error::LEGACY_DEPLOYMENT_CHANGE_REQUIRES_ADOPTION: Deploy prod cannot open a tag-only PR. Use slai-app-creator 0.0.92 or later with IMAGE_NAME=APP_ID at mkmhub.amd.com/hw-slaiapp-dev so the authorizer can emit the signed digest contract."
+            exit 1
+          fi
+
+      - name: Set image coordinates
+        id: image
+        env:
+          HARBOR_REGISTRY: ${{ steps.cfg.outputs.harbor_registry }}
+          HARBOR_PROJECT: ${{ steps.cfg.outputs.harbor_project }}
+          IMAGE_NAME: ${{ steps.cfg.outputs.image_name }}
+        run: |
+          set -euo pipefail
+          TAG="slai-sc-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          FULL_IMAGE="${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${IMAGE_NAME}:${TAG}"
+          echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_repository=${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "full_image=${FULL_IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.cfg.outputs.harbor_registry }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      # Build linux/amd64 and load into the local docker daemon (no push yet) so the
+      # smoke step below can run the image and verify probe paths before we pollute
+      # Harbor and open a manifest PR.
+      - name: Build container (linux/amd64, local load)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.cfg.outputs.build_context }}
+          file: ${{ steps.cfg.outputs.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.image.outputs.full_image }}
+
+      # Probe smoke test: verify the built image actually responds 200 to every
+      # readiness/liveness path declared in deployment.yaml, BEFORE the Harbor push
+      # and manifest PR. A 404 here means kubelet will see the same 404 in the
+      # cluster and CrashLoopBackOff the pod (see skills/slai-app-creator/references/when-users-ask.md).
+      # Mirrors skills/slai-app-creator/scripts/probe-smoke.sh in slai-app-platform.
+      - name: Smoke-test probe paths
+        env:
+          IMAGE: ${{ steps.image.outputs.full_image }}
+          MANIFEST_HANDOFF_REL: ${{ steps.cfg.outputs.manifest_handoff_rel }}
+        run: |
+          set -euo pipefail
+          DEP="${GITHUB_WORKSPACE}/${MANIFEST_HANDOFF_REL}/deployment.yaml"
+          [[ -f "$DEP" ]] || { echo "::error::missing $DEP"; exit 1; }
+          CPORT="$(yq eval '.spec.template.spec.containers[0].ports[0].containerPort' "$DEP" | tr -d '"')"
+          [[ "$CPORT" =~ ^[0-9]+$ ]] || { echo "::error::could not read containerPort from $DEP"; exit 1; }
+          BASE_PATH="$(yq eval '.spec.template.spec.containers[0].env[]? | select(.name=="BASE_PATH") | .value' "$DEP" | tr -d '"')"
+          [[ "$BASE_PATH" == "null" ]] && BASE_PATH=""
+          mapfile -t PATHS < <({ yq eval '.spec.template.spec.containers[0].livenessProbe.httpGet.path'  "$DEP"
+                                yq eval '.spec.template.spec.containers[0].readinessProbe.httpGet.path' "$DEP"
+                              } | tr -d '"' | grep -v '^null$' | awk '!seen[$0]++')
+          if [[ ${#PATHS[@]} -eq 0 ]]; then
+            echo "::warning::no readiness/livenessProbe httpGet.path declared — skipping smoke test"
+            exit 0
+          fi
+          HOST_PORT=$((CPORT + 10000))
+          CNAME="probe-smoke-${GITHUB_RUN_ID}"
+          docker run -d --rm --name "$CNAME" -p "${HOST_PORT}:${CPORT}" \
+            -e HOST=0.0.0.0 -e PORT="${CPORT}" \
+            ${BASE_PATH:+-e BASE_PATH="${BASE_PATH}"} \
+            "$IMAGE" >/dev/null
+          trap 'docker rm -f "$CNAME" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS -o /dev/null --max-time 2 "http://127.0.0.1:${HOST_PORT}/" 2>/dev/null \
+              || curl -sS -o /dev/null --max-time 2 "http://127.0.0.1:${HOST_PORT}/" 2>/dev/null && break
+            sleep 1
+          done
+          fail=0
+          for p in "${PATHS[@]}"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${HOST_PORT}${p}")
+            if [[ "$code" == "200" ]]; then echo "GET $p -> $code OK"
+            else echo "::error::GET $p -> $code (kubelet will see this in cluster -> CrashLoopBackOff)"; fail=1
+            fi
+          done
+          [[ $fail -eq 0 ]] || { docker logs --tail 80 "$CNAME" || true; exit 1; }
+
+      - name: Push container to Harbor
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.cfg.outputs.build_context }}
+          file: ${{ steps.cfg.outputs.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.image.outputs.full_image }}
+
+  authorize:
+    needs: build-and-push
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: AMD-SLAI/slai-app-platform/.github/workflows/app-image-publish.yml@b8827dac5c06d18952a91be372c253a8281c1122
+    with:
+      app_id: ${{ needs.build-and-push.outputs.app_id }}
+      image_repository: ${{ needs.build-and-push.outputs.image_repository }}
+      image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+      image_digest: ${{ needs.build-and-push.outputs.image_digest }}
+    secrets:
+      HARBOR_USERNAME: ${{ secrets.HARBOR_USERNAME }}
+      HARBOR_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+
+  manifest-pr:
+    needs: [build-and-push, authorize]
+    if: ${{ always() && needs.build-and-push.result == 'success' && needs.authorize.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout app repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for platform manifest validation
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned platform manifest validation dependencies
+        run: python3 -m pip install --disable-pip-version-check --no-input "jsonschema==3.2.0" "PyYAML==6.0.1"
+
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/bin"
+          curl -fsSL -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
+          install -m 0755 "$RUNNER_TEMP/yq" "${RUNNER_TEMP}/bin/yq"
+          echo "${RUNNER_TEMP}/bin" >> "$GITHUB_PATH"
+
+      - name: Download authorized handoff records
+        if: needs.authorize.result == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.authorize.outputs.release_artifact_name }}
+          path: release-handoff
+
+      - name: Clone slai-app-platform, sync manifests and authorization records, open PR
+        env:
+          GH_TOKEN: ${{ secrets.SLAI_APP_DEV_PR_TOKEN }}
+          SLAI_BASE_REF: ${{ github.event.inputs.slai_base_ref }}
+          APP_ID: ${{ needs.build-and-push.outputs.app_id }}
+          SLAI_REPO: ${{ needs.build-and-push.outputs.slai_repo }}
+          FULL_IMAGE: ${{ needs.authorize.outputs.deployment_image }}
+          MANIFEST_HANDOFF_REL: ${{ needs.build-and-push.outputs.manifest_handoff_rel }}
+        run: |
+          set -euo pipefail
+          command -v gh >/dev/null 2>&1 || {
+            echo "::error::GitHub CLI (gh) not found on runner. Install gh or use a GitHub-hosted runner (gh is preinstalled)."
+            exit 1
+          }
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::Secret SLAI_APP_DEV_PR_TOKEN is not set. Create a fine-grained PAT per SKILL.md §1c and add it under Settings → Secrets and variables → Actions on THIS repository."
+            exit 1
+          fi
+          HANDOFF="${GITHUB_WORKSPACE}/${MANIFEST_HANDOFF_REL}"
+          if [[ ! -f "${HANDOFF}/deployment.yaml" ]]; then
+            echo "::error::Missing handoff ${HANDOFF}/deployment.yaml — add manifests under ${MANIFEST_HANDOFF_REL} (see SKILL.md)."
+            exit 1
+          fi
+          if [[ ! -f "${HANDOFF}/service.yaml" ]]; then
+            echo "::error::Missing handoff ${HANDOFF}/service.yaml"
+            exit 1
+          fi
+          if [[ ! -f "${HANDOFF}/z-ingress.yaml" ]]; then
+            echo "::error::Missing handoff ${HANDOFF}/z-ingress.yaml — required (SKILL.md §3)."
+            exit 1
+          fi
+          BRANCH="deploy/${APP_ID}/sync-${GITHUB_SHA:0:12}"
+          WORK="$(mktemp -d)"
+          git clone --depth 1 --branch "${SLAI_BASE_REF}" \
+            "https://x-access-token:${GH_TOKEN}@github.com/${SLAI_REPO}.git" "${WORK}"
+          cd "${WORK}"
+          git checkout -b "${BRANCH}"
+          DEST="deploy/slai-app-prod/${APP_ID}"
+          mkdir -p "${DEST}"
+          # Existing legacy apps may still carry tls-secret.enc.yaml; preserve it when present.
+          for f in deployment.yaml service.yaml z-ingress.yaml secrets.enc.yaml tls-secret.enc.yaml networkpolicy.yaml auth-policy.json cli-auth-policy.yaml; do
+            if [[ -f "${HANDOFF}/${f}" ]]; then
+              cp "${HANDOFF}/${f}" "${DEST}/${f}"
+            fi
+          done
+          if [[ ! -d release-handoff/handoff ]]; then
+            echo "::error::NEW_APP_REQUIRES_IMAGE_POLICY: authorizer records are required before opening a platform PR."
+            exit 1
+          fi
+          install -m 0644 release-handoff/handoff/image-policy.yaml "${DEST}/image-policy.yaml"
+          install -m 0644 release-handoff/handoff/image-release.json "${DEST}/image-release.json"
+          install -m 0644 release-handoff/offline/attestation-bundle.jsonl "${DEST}/image-release.bundle.jsonl"
+          if [[ ! -f "${HANDOFF}/secrets.enc.yaml" ]]; then
+            echo "::error::Missing ${HANDOFF}/secrets.enc.yaml — required."
+            exit 1
+          fi
+          export FULL_IMAGE
+          yq eval '.spec.template.spec.containers[0].image = strenv(FULL_IMAGE)' -i "${DEST}/deployment.yaml"
+          echo "Validating stamped handoff in ${DEST}..."
+          python3 skills/slai-app-creator/scripts/main.py "${DEST}"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add "${DEST}"
+          if git diff --staged --quiet; then
+            echo "::notice::No changes to ${DEST} after sync (image may already match); skipping PR."
+            exit 0
+          fi
+          git commit -m "chore(${APP_ID}): sync manifests, image ${FULL_IMAGE}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${SLAI_REPO}.git" "HEAD:refs/heads/${BRANCH}"
+          BODY=$(printf '%s\n' \
+            "Automated deploy from \`${GITHUB_REPOSITORY}\` @ \`${GITHUB_SHA}\`." \
+            "" \
+            "- **Handoff copied from:** \`${MANIFEST_HANDOFF_REL}\` → \`${DEST}\`" \
+            "- **FULL_IMAGE:** \`${FULL_IMAGE}\`" \
+            "" \
+            "After merge, the platform team owns rollout from \`${SLAI_REPO}\`; app owners should not run **Platform deploy**.")
+          # Required: exactly one deploy/<namespace> label matching deploy/... (see repo .github/pull_request_template.md)
+          gh pr create \
+            --repo "${SLAI_REPO}" \
+            --base "${SLAI_BASE_REF}" \
+            --head "${BRANCH}" \
+            --label deploy/slai-app-prod \
+            --title "chore(${APP_ID}): sync manifests / bump image" \
+            --body "${BODY}"
