@@ -1,0 +1,139 @@
+.root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 500;
+}
+
+/* Full-page dim — fixed so scroll doesn't move it */
+.overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  z-index: 501;
+  background: rgba(0, 0, 0, 0.72);
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+    0% var(--sy),
+    var(--sx) var(--sy),
+    var(--sx) calc(var(--sy) + var(--sh)),
+    calc(var(--sx) + var(--sw)) calc(var(--sy) + var(--sh)),
+    calc(var(--sx) + var(--sw)) var(--sy),
+    0% var(--sy)
+  );
+}
+
+/* Teal ring — fixed, viewport coords, never shifts */
+.spotlight {
+  position: fixed;
+  border-radius: 10px;
+  border: 2px solid var(--amd-teal);
+  box-shadow: 0 0 0 4px rgba(0, 194, 222, 0.12);
+  pointer-events: none;
+  z-index: 502;
+}
+
+/* Tooltip card — fixed */
+.tooltip {
+  position: fixed;
+  z-index: 503;
+  background: var(--amd-bg-card);
+  border: 1px solid var(--amd-border-mid);
+  border-radius: var(--radius-md);
+  padding: 1.125rem 1.25rem 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 194, 222, 0.1);
+  pointer-events: auto;
+}
+
+.tooltipStep {
+  font-family: var(--font-primary);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amd-teal);
+  margin-bottom: 0.4rem;
+}
+
+.tooltipTitle {
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--amd-white);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.tooltipBody {
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  color: var(--amd-muted);
+  line-height: 1.65;
+  margin-bottom: 1rem;
+}
+
+.tooltipFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.skipBtn {
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  color: var(--amd-border-mid);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.skipBtn:hover { color: var(--amd-muted); }
+
+.nextBtn {
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--amd-black);
+  background: var(--amd-teal);
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.nextBtn:hover { opacity: 0.85; }
+
+/* ── Demo trigger button ── */
+.demoBtn {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--amd-bg-card);
+  border: 1px solid var(--amd-border-mid);
+  border-radius: 999px;
+  color: var(--amd-muted);
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.demoBtn:hover {
+  border-color: var(--amd-teal);
+  color: var(--amd-teal);
+  box-shadow: 0 0 0 3px rgba(0, 194, 222, 0.1);
+}

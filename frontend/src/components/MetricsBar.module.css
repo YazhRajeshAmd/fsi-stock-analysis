@@ -1,0 +1,42 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--amd-border);
+  flex-shrink: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  align-items: center;
+}
+
+.value {
+  font-family: var(--font-primary);
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--amd-teal);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.label {
+  font-family: var(--font-primary);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--amd-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.divider {
+  width: 1px;
+  height: 32px;
+  background-color: var(--amd-border);
+  flex-shrink: 0;
+}

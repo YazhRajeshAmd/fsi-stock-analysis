@@ -1,0 +1,128 @@
+/* wrapper — centres the pill on the page */
+.wrapper {
+  width: 100%;
+  padding: var(--space-lg) var(--space-xl);
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 100;
+}
+
+/* subtle glow pulse — animates box-shadow only, no conic gradient */
+.pillGlow {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  border-radius: 999px;
+  padding: 1.5px;
+  background: var(--amd-teal);
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 194, 222, 0.15), 0 0 24px rgba(0, 194, 222, 0.06); }
+  50%       { box-shadow: 0 0 20px rgba(0, 194, 222, 0.35), 0 0 48px rgba(0, 194, 222, 0.14); }
+}
+
+/* the pill itself */
+.header {
+  width: 100%;
+  background-color: rgba(13, 14, 15, 0.92);
+  border-radius: 999px;
+  padding: 0 var(--space-xl);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+}
+
+.inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+/* ── Logo lockup ── */
+.logoLockup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.amdLogo {
+  height: 26px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.logoSeparator {
+  width: 1px;
+  height: 18px;
+  background-color: var(--amd-border-mid);
+  opacity: 0.5;
+}
+
+.rocmLogo {
+  height: 22px;
+  width: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+/* ── Nav ── */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.navItem {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--text-body);
+  color: var(--amd-muted);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.navDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--amd-border-mid);
+  flex-shrink: 0;
+}
+
+/* ── Live badge ── */
+.badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--amd-teal);
+  background-color: rgba(0, 194, 222, 0.06);
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-small);
+  color: var(--amd-teal);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--amd-teal);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}

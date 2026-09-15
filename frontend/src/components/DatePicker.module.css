@@ -1,0 +1,185 @@
+.root {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Trigger button ── */
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  background-color: var(--amd-bg-input);
+  border: 1px solid var(--amd-border);
+  border-radius: var(--radius-sm);
+  color: var(--amd-muted);
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.trigger:focus,
+.trigger:hover {
+  border-color: var(--amd-teal);
+  box-shadow: 0 0 0 3px rgba(0, 194, 222, 0.12);
+  outline: none;
+}
+
+.triggerValue {
+  color: var(--amd-white);
+  font-size: var(--text-body);
+}
+
+.triggerPlaceholder {
+  color: var(--amd-border-mid);
+  font-size: var(--text-body);
+}
+
+/* ── Popover ── */
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  background-color: var(--amd-bg-card);
+  border: 1px solid var(--amd-border-mid);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Month navigation ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.navBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--amd-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.navBtn:hover {
+  background-color: var(--amd-bg-input);
+  color: var(--amd-white);
+}
+
+.monthLabel {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-body);
+  color: var(--amd-white);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease;
+}
+
+.monthLabel:hover {
+  background-color: var(--amd-bg-input);
+}
+
+/* ── Day-of-week header ── */
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--space-xs);
+}
+
+.weekDay {
+  font-family: var(--font-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--amd-border-mid);
+  text-align: center;
+  padding: 2px 0;
+}
+
+/* ── Day grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--amd-white);
+  font-family: var(--font-primary);
+  font-size: var(--text-small);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cell:hover {
+  background-color: var(--amd-bg-input);
+}
+
+.cellOther {
+  color: var(--amd-border-mid);
+  opacity: 0.5;
+}
+
+.cellOther:hover {
+  opacity: 1;
+}
+
+.cellToday {
+  background-color: var(--amd-teal);
+  color: var(--amd-black);
+  font-weight: var(--font-weight-bold);
+}
+
+.cellToday:hover {
+  background-color: var(--amd-teal-dark);
+}
+
+.cellSelected {
+  background-color: rgba(0, 194, 222, 0.18);
+  color: var(--amd-teal);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid rgba(0, 194, 222, 0.4);
+}
+
+.cellSelected:hover {
+  background-color: rgba(0, 194, 222, 0.28);
+}
+
+/* today dot (shown when today is not selected) */
+.dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--amd-teal);
+}
